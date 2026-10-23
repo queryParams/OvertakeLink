@@ -217,6 +217,8 @@ class CarProjection private constructor(context: Context, display: Display) :
         fun prepareSettings(settings: com.andrerinas.openheadunit.utils.Settings) {
             settings.resolutionId = com.andrerinas.openheadunit.utils.Settings.Resolution._1920x1080.id
             settings.videoFitMode = com.andrerinas.openheadunit.utils.Settings.VideoFitMode.CONTAIN
+            // Плотность — автоматически по полосе экрана (прямой режим задаёт свою).
+            settings.dpiPixelDensity = 0
             settings.videoCodec = "Auto"
             // 30 к/с: ГУ всё равно показывает ~24, а распаковывать вдвое меньше кадров — меньше расход батареи.
             settings.fpsLimit = 30

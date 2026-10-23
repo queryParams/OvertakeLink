@@ -414,11 +414,9 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         LinkSession s = session;
         String mode = videoMode();
         direct = !VIDEO_TRANSCODE.equals(mode);
-        // В прямом режиме дисплей нужен только для геометрии AA: его размер — размер раскладки интерфейса.
         DirectProjection.Size size = VIDEO_DIRECT_LIGHT.equals(mode) ? DirectProjection.Size.LIGHT
                 : VIDEO_DIRECT_SMALL.equals(mode) ? DirectProjection.Size.SMALL : DirectProjection.Size.FULL;
-        int[] layout = direct ? DirectProjection.layoutSize(carWidth, carHeight, size) : new int[]{carWidth, carHeight};
-        CarScreen screen = new CarScreen(layout[0], layout[1], CAR_DPI * layout[0] / carWidth, new CarScreen.Sink() {
+        CarScreen screen = new CarScreen(carWidth, carHeight, CAR_DPI, new CarScreen.Sink() {
             @Override
             public void onCodecConfig(byte[] spsPps) {
                 if (s.videoPlaying()) {

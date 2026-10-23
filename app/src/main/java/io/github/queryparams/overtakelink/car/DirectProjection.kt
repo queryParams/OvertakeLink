@@ -26,9 +26,9 @@ import java.io.ByteArrayOutputStream
 
 /**
  * Прямой режим: H.264 от Android Auto уходит на ГУ как есть — без декодирования, композиции и
- * повторного кодирования. AA рисует стандартный кадр (1080p или 720p) с интерфейсом посередине
- * и полями поровну с краёв; в SPS дописывается обрезка кадра до этой области (см. [SpsCrop]).
- * Касания пересчитываются в координаты AA прямо в потоке чтения USB.
+ * повторного кодирования. AA рисует стандартный кадр (1080p, 720p или 480p) целиком, с поправкой
+ * на вытянутые пиксели; ГУ растягивает его на свой экран. Касания ГУ присылает уже в координатах
+ * кадра — они уходят в AA прямо из потока чтения USB.
  */
 object DirectProjection {
 
@@ -54,9 +54,8 @@ object DirectProjection {
 
 
     /**
-     * Размер кадра AA в прямом режиме. 1080p и 720p — интерфейс в полосе экрана машины, в SPS
-     * дописывается обрезка до неё. 480p — кадр целиком меньше экрана машины: без обрезки, ГУ
-     * растягивает его на экран, AA рисует с поправкой на вытянутые пиксели (картинка мягче).
+     * Размер кадра AA в прямом режиме. Кадр идёт на ГУ целиком и как есть: SPS с обрезкой до полосы
+     * экрана декодер ГУ не показывает (в машине 720p и 1080p с обрезкой — чёрный экран, 480p без неё — картинка).
      */
     enum class Size(val width: Int, val height: Int, val resolution: Settings.Resolution) {
         FULL(1920, 1080, Settings.Resolution._1920x1080),
@@ -68,18 +67,13 @@ object DirectProjection {
     @JvmStatic
     fun prepareSettings(settings: Settings, size: Size) {
         settings.resolutionId = size.resolution.id
-        settings.videoFitMode = if (size == Size.SMALL) Settings.VideoFitMode.FILL else Settings.VideoFitMode.CONTAIN
+        settings.videoFitMode = Settings.VideoFitMode.FILL
+        // Один холст интерфейса (~853 dp в ширину) для всех размеров: автоматика OHU даёт 150 dpi на
+        // 800 px ширины, но не выше 240 — в 1080p холст вырос бы до 1280 dp и интерфейс измельчал.
+        settings.dpiPixelDensity = size.width * 150 / 800
         settings.videoCodec = VideoDecoder.CodecType.H264.settingsValue
         settings.fpsLimit = 30
     }
-
-    /**
-     * Размер экрана, под который AA раскладывает интерфейс. Для 720p — уменьшенная до ширины кадра
-     * копия экрана машины с теми же пропорциями: ГУ растянет её без искажений.
-     */
-    @JvmStatic
-    fun layoutSize(carWidth: Int, carHeight: Int, size: Size): IntArray =
-        if (size == Size.LIGHT) intArrayOf(size.width, Math.round(size.width.toFloat() * carHeight / carWidth)) else intArrayOf(carWidth, carHeight)
 
     @JvmStatic
     fun start(context: Context, width: Int, height: Int, size: Size, sink: Sink) {
@@ -98,8 +92,7 @@ object DirectProjection {
         prepareSettings(app.settings, size)
         val car = CarScreen.windowContext(context) ?: context
         HeadUnitScreenConfig.init(car, car.resources.displayMetrics, app.settings)
-        val layout = layoutSize(width, height, size)
-        HeadUnitScreenConfig.updateSurfaceDimensions(layout[0], layout[1])
+        HeadUnitScreenConfig.updateSurfaceDimensions(width, height)
         app.videoDecoder.passthrough = ::onAccessUnit
         val s = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         scope = s
@@ -131,9 +124,7 @@ object DirectProjection {
                 wasProjecting = true
                 noticeText = null
                 closed = false
-                EventLog.add("Экран машины: AA рисует ${HeadUnitScreenConfig.getNegotiatedWidth()}x" +
-                    "${HeadUnitScreenConfig.getNegotiatedHeight()}, поля ${HeadUnitScreenConfig.getWidthMargin()}x" +
-                    "${HeadUnitScreenConfig.getHeightMargin()}")
+                EventLog.add("Экран машины: AA рисует ${frameWidth()}x${frameHeight()}, ГУ растягивает на ${carWidth}x$carHeight")
                 main.removeCallbacks(firstFrameWatchdog)
                 main.post(firstFrameWatchdog)
             }
@@ -202,22 +193,14 @@ object DirectProjection {
     }
 
     /**
-     * Заставка того же размера и с той же обрезкой, что и кадры AA: декодер ГУ настраивается на
-     * первый кадр и смену размера посреди потока может не пережить.
+     * Заставка того же размера, что и кадры AA: декодер ГУ настраивается на первый кадр и смену
+     * размера посреди потока может не пережить. Текст сжат по ширине так же, как ГУ его растянет.
      */
     private fun splash(text: String): Frame {
-        val raw = SplashFrame.encode(HeadUnitScreenConfig.getNegotiatedWidth(), HeadUnitScreenConfig.getNegotiatedHeight(),
-            visibleHeight(), text)
+        val xScale = frameWidth().toFloat() / carWidth / (frameHeight().toFloat() / carHeight)
+        val raw = SplashFrame.encode(frameWidth(), frameHeight(), xScale, text)
         return frame(raw, 0, raw.size, false) ?: throw IllegalStateException("в заставке нет кадра")
     }
-
-    private fun cropSps(b: ByteArray, off: Int, len: Int) = SpsCrop.crop(b, off, len, HeadUnitScreenConfig.getWidthMargin() / 2,
-        HeadUnitScreenConfig.getHeightMargin() / 2, visibleWidth(), visibleHeight())
-
-    /** SPS для ГУ: с обрезкой до полосы, а если полей нет (480p) — исходный, без перезаписи. */
-    private fun headUnitSps(b: ByteArray, off: Int, len: Int, cropped: SpsCrop.Result): ByteArray =
-        if (HeadUnitScreenConfig.getWidthMargin() == 0 && HeadUnitScreenConfig.getHeightMargin() == 0) b.copyOfRange(off, off + len)
-        else cropped.nal
 
     /**
      * Кадр для ГУ: SPS+PPS и сам кадр (срезы) — отдельными пакетами, как у кодировщика телефона.
@@ -242,15 +225,12 @@ object DirectProjection {
         forEachNal(buf, off, len) { s, e ->
             when (val type = buf[s].toInt() and 31) {
                 7 -> {
-                    val r = cropSps(buf, s, e - s)
-                    val nal = headUnitSps(buf, s, e - s, r)
-                    if (fromAa && sps == null) {
-                        EventLog.add("Экран машины: поток AA H.264 профиль ${r.profile} уровень ${r.level / 10}.${r.level % 10}, " +
-                            "${r.codedWidth}x${r.codedHeight}, " +
-                            "на ГУ — ${visibleWidth()}x${visibleHeight()} из середины кадра\n" +
-                            "    SPS AA: ${EventLog.hex(buf, s, e - s, 64)}\n    SPS на ГУ: ${EventLog.hex(nal, 0, nal.size, 64)}")
+                    if (fromAa && sps == null && e - s > 3) {
+                        val level = buf[s + 3].toInt() and 0xff
+                        EventLog.add("Экран машины: поток AA H.264 профиль ${buf[s + 1].toInt() and 0xff} уровень ${level / 10}.${level % 10}, " +
+                            "кадр ${frameWidth()}x${frameHeight()} целиком\n    SPS: ${EventLog.hex(buf, s, e - s, 64)}")
                     }
-                    sp = nal
+                    sp = buf.copyOfRange(s, e)
                 }
                 8 -> pp = buf.copyOfRange(s, e)
                 in 1..5 -> {
@@ -289,13 +269,14 @@ object DirectProjection {
         send(f)
     }
 
-    private fun visibleWidth(): Int =
-        (HeadUnitScreenConfig.getNegotiatedWidth() - HeadUnitScreenConfig.getWidthMargin()).coerceAtLeast(16)
+    private fun frameWidth(): Int = HeadUnitScreenConfig.getNegotiatedWidth()
 
-    private fun visibleHeight(): Int =
-        (HeadUnitScreenConfig.getNegotiatedHeight() - HeadUnitScreenConfig.getHeightMargin()).coerceAtLeast(16)
+    private fun frameHeight(): Int = HeadUnitScreenConfig.getNegotiatedHeight()
 
-    /** Касание с экрана ГУ (поток чтения USB): пиксели машины → координаты AA. */
+    /**
+     * Касание с экрана ГУ (поток чтения USB). ГУ присылает его уже в координатах кадра: пересчитывает
+     * пиксели экрана в размер из заголовка видеопакета (libhmi_for_hclink, coordinate_transformation).
+     */
     @JvmStatic
     fun touch(action: Int, x: Float, y: Float) {
         val ctx = context ?: return
@@ -315,8 +296,8 @@ object DirectProjection {
         val ev = MotionEvent.obtain(downTime, now, action, x, y, 0)
         try {
             val aaAction = TouchEvent.motionEventToAction(ev) ?: return
-            val ax = (x * visibleWidth() / carWidth).toInt()
-            val ay = (y * visibleHeight() / carHeight).toInt()
+            val ax = x.toInt().coerceIn(0, frameWidth() - 1)
+            val ay = y.toInt().coerceIn(0, frameHeight() - 1)
             comm.send(TouchEvent(SystemClock.elapsedRealtime(), aaAction, 0, listOf(Triple(0, ax, ay))))
         } finally {
             ev.recycle()

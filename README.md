@@ -91,7 +91,8 @@ from the file (more in [Privacy](PRIVACY.md)).
   supported yet.
 - Direct mode depends on the head unit decoder: if the car screen stays black, try “Direct 720p”,
   then “Direct 480p”; if that doesn’t help, choose “Compatible”. On the Geely Atlas Pro 2023 direct
-  mode does not work yet; compatible does.
+  480p shows a picture; 720p and 1080p were reworked in 0.9.1 and are still being tested; compatible
+  works.
 
 **Tested:** Xiaomi 14 Ultra (Android 15, HyperOS) + Geely Atlas Pro 2023; Android 15 emulator with a
 head unit simulator. Other combinations — please report how it went.
@@ -130,13 +131,10 @@ Android Auto (on the phone) ──AAP over localhost──► OvertakeLink ─�
 
 Video modes:
 
-- **Direct** — H.264 from Android Auto is passed to the head unit as is: AA draws a 1080p frame, and
-  cropping to the car screen strip is written into the stream header (SPS). Minimal latency and
-  battery use.
-- **Direct 720p** — the same at 720p; the head unit scales the picture to the screen.
-- **Direct 480p** — an 800×480 frame, entirely smaller than the car screen, without cropping; the
-  head unit scales it to the screen, AA draws with compensation for stretched pixels. Softer
-  picture, but the frame is never larger than the screen.
+- **Direct 1080p / 720p / 480p** — H.264 from Android Auto is passed to the head unit as is, without
+  re-encoding: minimal latency and battery use. The head unit always stretches the frame to the whole
+  screen, so AA draws it with compensation for stretched pixels — proportions on screen are right.
+  The bigger the frame, the sharper the picture.
 - **Compatible** — AA draws 1080p with the interface in the car screen strip; the phone decodes the
   video and re-encodes that strip pixel for pixel for the car screen (6 Mbit/s). Slightly more
   latency, but the stream is the same as the stock QDLink one and independent of the head unit
