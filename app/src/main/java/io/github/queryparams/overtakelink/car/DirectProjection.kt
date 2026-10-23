@@ -50,7 +50,7 @@ object DirectProjection {
     @Volatile private var closed = false
     private var wasProjecting = false
     private var downTime = 0L
-    private val splashes = HashMap<String, ByteArray>()
+    private val splashes = HashMap<String, Frame>()
 
 
     /**
@@ -191,10 +191,10 @@ object DirectProjection {
     private fun showSplash(text: String) {
         Thread({
             try {
-                val data = synchronized(splashes) {
+                val frame = synchronized(splashes) {
                     splashes.getOrPut(text) { splash(text) }
                 }
-                sink?.frame(data, 0, data.size, true)
+                send(frame)
             } catch (e: Exception) {
                 EventLog.error("заставка экрана машины", e)
             }
@@ -205,19 +205,10 @@ object DirectProjection {
      * Заставка того же размера и с той же обрезкой, что и кадры AA: декодер ГУ настраивается на
      * первый кадр и смену размера посреди потока может не пережить.
      */
-    private fun splash(text: String): ByteArray {
+    private fun splash(text: String): Frame {
         val raw = SplashFrame.encode(HeadUnitScreenConfig.getNegotiatedWidth(), HeadUnitScreenConfig.getNegotiatedHeight(),
             visibleHeight(), text)
-        val out = ByteArrayOutputStream(raw.size + 16)
-        forEachNal(raw, 0, raw.size) { s, e ->
-            if (raw[s].toInt() and 31 == 7) {
-                val nal = headUnitSps(raw, s, e - s, cropSps(raw, s, e - s))
-                writeNal(out, nal, 0, nal.size)
-            } else {
-                writeNal(out, raw, s, e - s)
-            }
-        }
-        return out.toByteArray()
+        return frame(raw, 0, raw.size, false) ?: throw IllegalStateException("в заставке нет кадра")
     }
 
     private fun cropSps(b: ByteArray, off: Int, len: Int) = SpsCrop.crop(b, off, len, HeadUnitScreenConfig.getWidthMargin() / 2,
@@ -228,51 +219,74 @@ object DirectProjection {
         if (HeadUnitScreenConfig.getWidthMargin() == 0 && HeadUnitScreenConfig.getHeightMargin() == 0) b.copyOfRange(off, off + len)
         else cropped.nal
 
-    /** Кадр от AA (поток видео OHU): Annex-B, одна единица доступа. */
-    private fun onAccessUnit(buf: ByteArray, off: Int, len: Int) {
-        val out = ByteArrayOutputStream(len + 64)
+    /**
+     * Кадр для ГУ: SPS+PPS и сам кадр (срезы) — отдельными пакетами, как у кодировщика телефона.
+     * Приёмник QDLink на ГУ (DrawMirrorUtil) узнаёт пакет по первому NAL: ключевым считает только
+     * пакет, который начинается с IDR, и до первого такого выбрасывает всё; SPS+PPS+IDR одним
+     * пакетом для него — просто SPS.
+     */
+    private class Frame(val config: ByteArray?, val slices: ByteArray, val key: Boolean)
+
+    private fun send(f: Frame) {
+        val s = sink ?: return
+        if (f.config != null) s.frame(f.config, 0, f.config.size, true)
+        s.frame(f.slices, 0, f.slices.size, f.key)
+    }
+
+    /** Единица доступа Annex-B → [Frame]; null, если в ней нет кадра (только SPS/PPS). */
+    private fun frame(buf: ByteArray, off: Int, len: Int, fromAa: Boolean): Frame? {
+        var sp: ByteArray? = null
+        var pp: ByteArray? = null
+        val slices = ByteArrayOutputStream(len)
         var key = false
-        var hasConfig = false
         forEachNal(buf, off, len) { s, e ->
-            when (buf[s].toInt() and 31) {
+            when (val type = buf[s].toInt() and 31) {
                 7 -> {
                     val r = cropSps(buf, s, e - s)
                     val nal = headUnitSps(buf, s, e - s, r)
-                    if (sps == null) {
+                    if (fromAa && sps == null) {
                         EventLog.add("Экран машины: поток AA H.264 профиль ${r.profile} уровень ${r.level / 10}.${r.level % 10}, " +
                             "${r.codedWidth}x${r.codedHeight}, " +
                             "на ГУ — ${visibleWidth()}x${visibleHeight()} из середины кадра\n" +
                             "    SPS AA: ${EventLog.hex(buf, s, e - s, 64)}\n    SPS на ГУ: ${EventLog.hex(nal, 0, nal.size, 64)}")
                     }
-                    sps = nal
-                    hasConfig = true
-                    writeNal(out, nal, 0, nal.size)
+                    sp = nal
                 }
-                8 -> {
-                    pps = buf.copyOfRange(s, e)
-                    writeNal(out, buf, s, e - s)
+                8 -> pp = buf.copyOfRange(s, e)
+                in 1..5 -> {
+                    if (type == 5) key = true
+                    writeNal(slices, buf, s, e - s)
                 }
-                5 -> {
-                    if (!hasConfig) {
-                        val sp = sps
-                        val pp = pps
-                        if (sp != null && pp != null) {
-                            writeNal(out, sp, 0, sp.size)
-                            writeNal(out, pp, 0, pp.size)
-                        }
-                    }
-                    key = true
-                    writeNal(out, buf, s, e - s)
-                }
-                else -> writeNal(out, buf, s, e - s)
+                // AUD, SEI и прочее декодеру не нужно, а в начале пакета помешало бы ГУ узнать кадр.
+                else -> {}
             }
         }
-        if (out.size() == 0) return
+        if (fromAa) {
+            sp?.let { sps = it }
+            pp?.let { pps = it }
+        }
+        if (slices.size() == 0) return null
+        var config: ByteArray? = null
+        if (key) {
+            val keySps = sp ?: if (fromAa) sps else null
+            val keyPps = pp ?: if (fromAa) pps else null
+            if (keySps != null && keyPps != null) {
+                val out = ByteArrayOutputStream(keySps.size + keyPps.size + 8)
+                writeNal(out, keySps, 0, keySps.size)
+                writeNal(out, keyPps, 0, keyPps.size)
+                config = out.toByteArray()
+            }
+        }
+        return Frame(config, slices.toByteArray(), key)
+    }
+
+    /** Кадр от AA (поток видео OHU): Annex-B, одна единица доступа. */
+    private fun onAccessUnit(buf: ByteArray, off: Int, len: Int) {
+        val f = frame(buf, off, len, true) ?: return
         framesFromAa++
-        if (needKey && !key) return
-        if (key) needKey = false
-        val data = out.toByteArray()
-        sink?.frame(data, 0, data.size, key)
+        if (needKey && !f.key) return
+        if (f.key) needKey = false
+        send(f)
     }
 
     private fun visibleWidth(): Int =
