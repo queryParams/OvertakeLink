@@ -68,12 +68,16 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     public static final String PREF_VIDEO_MODE = "videoMode";
     public static final String VIDEO_DIRECT = "direct";
     public static final String VIDEO_DIRECT_LIGHT = "direct720";
+    public static final String VIDEO_DIRECT_SMALL = "direct480";
     public static final String VIDEO_TRANSCODE = "transcode";
     /** По умолчанию — совместимый: проверен в машине; прямой быстрее, но зависит от декодера ГУ. */
     public static final String VIDEO_DEFAULT = VIDEO_TRANSCODE;
     private static final int CAR_DPI = 160;
-    /** Как в записи сеанса родного QDLink с этим ГУ: 2,27 Мбит/с, ключевой кадр раз в 2 с. */
-    private static final int DEFAULT_BITRATE = 2_265_600;
+    /**
+     * Битрейт кодировщика. ГУ просит 2,27 Мбит/с, как у родного QDLink, но для текста и карт на 1920x590
+     * этого мало; декодер ГУ (уровень 4) принимает до 20 Мбит/с. Ключевой кадр — раз в 2 с, как у родного.
+     */
+    private static final int BITRATE = 6_000_000;
     private static final int DEFAULT_KEY_INTERVAL = 2;
 
     private static volatile OvertakeLinkService instance;
@@ -405,13 +409,15 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         v.width = carWidth;
         v.height = carHeight;
         v.frameRate = CarScreen.FRAME_RATE;
-        v.bitRate = DEFAULT_BITRATE;
+        v.bitRate = BITRATE;
         v.frameInterval = DEFAULT_KEY_INTERVAL;
         LinkSession s = session;
         String mode = videoMode();
         direct = !VIDEO_TRANSCODE.equals(mode);
         // В прямом режиме дисплей нужен только для геометрии AA: его размер — размер раскладки интерфейса.
-        int[] layout = direct ? DirectProjection.layoutSize(carWidth, carHeight, VIDEO_DIRECT_LIGHT.equals(mode)) : new int[]{carWidth, carHeight};
+        DirectProjection.Size size = VIDEO_DIRECT_LIGHT.equals(mode) ? DirectProjection.Size.LIGHT
+                : VIDEO_DIRECT_SMALL.equals(mode) ? DirectProjection.Size.SMALL : DirectProjection.Size.FULL;
+        int[] layout = direct ? DirectProjection.layoutSize(carWidth, carHeight, size) : new int[]{carWidth, carHeight};
         CarScreen screen = new CarScreen(layout[0], layout[1], CAR_DPI * layout[0] / carWidth, new CarScreen.Sink() {
             @Override
             public void onCodecConfig(byte[] spsPps) {
@@ -440,7 +446,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
             return;
         }
         if (direct) {
-            DirectProjection.start(this, carWidth, carHeight, VIDEO_DIRECT_LIGHT.equals(mode), (data, off, len, keyFrame) -> {
+            s.setFrameSize(size.getWidth(), size.getHeight());
+            DirectProjection.start(this, carWidth, carHeight, size, (data, off, len, keyFrame) -> {
                 if (s.videoPlaying()) {
                     sendVideo(s.videoPacket(data, off, len), keyFrame);
                 }
@@ -494,15 +501,13 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
                 return;
             }
         }
-        if (v.bitRate > 0 && v.bitRate != DEFAULT_BITRATE) {
-            screen.setBitRate(v.bitRate);
-        }
         // Показ начинается с SPS/PPS и ключевого кадра: обычные кадры до них декодер ГУ показать не может.
         waitKeyFrame = true;
         requestKeyFrame();
-        EventLog.add("ГУ включило видео (" + (direct ? "прямой режим" : "перекодирование") + "): " + v.width + "x" + v.height + ", " + v.bitRate + " бит/с");
+        EventLog.add("ГУ включило видео (" + (direct ? "прямой режим" : "перекодирование") + "): " + v.width + "x" + v.height
+                + ", ГУ просит " + v.bitRate + " бит/с" + (direct ? "" : ", кодировщик — " + BITRATE));
         setState(State.RUNNING, direct ? getString(R.string.ol_running_direct, v.width, v.height)
-                : getString(R.string.ol_running_transcode, v.width, v.height, (v.bitRate > 0 ? v.bitRate : DEFAULT_BITRATE) / 1e6));
+                : getString(R.string.ol_running_transcode, v.width, v.height, BITRATE / 1e6));
     }
 
     /** ГУ остановило видео: перестаём слать кадры, Android Auto продолжает работать. */

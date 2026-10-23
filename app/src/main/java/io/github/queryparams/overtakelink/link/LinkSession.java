@@ -96,6 +96,12 @@ public final class LinkSession {
     }
 
     /** Упаковка кадра H.264 в видеопакет. */
+    /** Размер кадра для заголовков видеопакетов, если поток не того размера, что экран машины. */
+    public synchronized void setFrameSize(int width, int height) {
+        video.frameWidth = width;
+        video.frameHeight = height;
+    }
+
     public synchronized byte[] videoPacket(byte[] data, int off, int len) {
         return OldPackets.video(screenReq, video, data, off, len);
     }

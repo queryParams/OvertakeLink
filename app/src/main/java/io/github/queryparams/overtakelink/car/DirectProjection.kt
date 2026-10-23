@@ -54,30 +54,35 @@ object DirectProjection {
 
 
     /**
-     * Настройки приёмника AA под прямой режим: H.264, интерфейс в полосе экрана машины, 30 к/с —
-     * 1080p при 60 к/с (уровень 4.2) декодер ГУ на MT6735 не принимает. Облегчённый — 720p:
-     * ГУ само растягивает картинку на экран.
+     * Размер кадра AA в прямом режиме. 1080p и 720p — интерфейс в полосе экрана машины, в SPS
+     * дописывается обрезка до неё. 480p — кадр целиком меньше экрана машины: без обрезки, ГУ
+     * растягивает его на экран, AA рисует с поправкой на вытянутые пиксели (картинка мягче).
      */
+    enum class Size(val width: Int, val height: Int, val resolution: Settings.Resolution) {
+        FULL(1920, 1080, Settings.Resolution._1920x1080),
+        LIGHT(1280, 720, Settings.Resolution._1280x720),
+        SMALL(800, 480, Settings.Resolution._800x480),
+    }
+
+    /** Настройки приёмника AA под прямой режим: H.264, 30 к/с — 1080p при 60 к/с (уровень 4.2) декодер ГУ на MT6735 не принимает. */
     @JvmStatic
-    fun prepareSettings(settings: Settings, light: Boolean) {
-        settings.resolutionId = (if (light) Settings.Resolution._1280x720 else Settings.Resolution._1920x1080).id
-        settings.videoFitMode = Settings.VideoFitMode.CONTAIN
+    fun prepareSettings(settings: Settings, size: Size) {
+        settings.resolutionId = size.resolution.id
+        settings.videoFitMode = if (size == Size.SMALL) Settings.VideoFitMode.FILL else Settings.VideoFitMode.CONTAIN
         settings.videoCodec = VideoDecoder.CodecType.H264.settingsValue
         settings.fpsLimit = 30
     }
 
     /**
-     * Размер экрана, под который AA раскладывает интерфейс. В облегчённом режиме — уменьшенная до
-     * ширины 720p копия экрана машины с теми же пропорциями: ГУ растянет её без искажений.
+     * Размер экрана, под который AA раскладывает интерфейс. Для 720p — уменьшенная до ширины кадра
+     * копия экрана машины с теми же пропорциями: ГУ растянет её без искажений.
      */
     @JvmStatic
-    fun layoutSize(carWidth: Int, carHeight: Int, light: Boolean): IntArray =
-        if (light) intArrayOf(LIGHT_WIDTH, Math.round(LIGHT_WIDTH.toFloat() * carHeight / carWidth)) else intArrayOf(carWidth, carHeight)
-
-    private const val LIGHT_WIDTH = 1280
+    fun layoutSize(carWidth: Int, carHeight: Int, size: Size): IntArray =
+        if (size == Size.LIGHT) intArrayOf(size.width, Math.round(size.width.toFloat() * carHeight / carWidth)) else intArrayOf(carWidth, carHeight)
 
     @JvmStatic
-    fun start(context: Context, width: Int, height: Int, light: Boolean, sink: Sink) {
+    fun start(context: Context, width: Int, height: Int, size: Size, sink: Sink) {
         val app = App.provide(context)
         this.context = context.applicationContext
         this.sink = sink
@@ -90,10 +95,10 @@ object DirectProjection {
         closed = false
         wasProjecting = false
         noticeText = null
-        prepareSettings(app.settings, light)
+        prepareSettings(app.settings, size)
         val car = CarScreen.windowContext(context) ?: context
         HeadUnitScreenConfig.init(car, car.resources.displayMetrics, app.settings)
-        val layout = layoutSize(width, height, light)
+        val layout = layoutSize(width, height, size)
         HeadUnitScreenConfig.updateSurfaceDimensions(layout[0], layout[1])
         app.videoDecoder.passthrough = ::onAccessUnit
         val s = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -187,7 +192,7 @@ object DirectProjection {
         Thread({
             try {
                 val data = synchronized(splashes) {
-                    splashes.getOrPut(text) { SplashFrame.encode(carWidth, carHeight, text) }
+                    splashes.getOrPut(text) { splash(text) }
                 }
                 sink?.frame(data, 0, data.size, true)
             } catch (e: Exception) {
@@ -195,6 +200,33 @@ object DirectProjection {
             }
         }, "ol-splash").start()
     }
+
+    /**
+     * Заставка того же размера и с той же обрезкой, что и кадры AA: декодер ГУ настраивается на
+     * первый кадр и смену размера посреди потока может не пережить.
+     */
+    private fun splash(text: String): ByteArray {
+        val raw = SplashFrame.encode(HeadUnitScreenConfig.getNegotiatedWidth(), HeadUnitScreenConfig.getNegotiatedHeight(),
+            visibleHeight(), text)
+        val out = ByteArrayOutputStream(raw.size + 16)
+        forEachNal(raw, 0, raw.size) { s, e ->
+            if (raw[s].toInt() and 31 == 7) {
+                val nal = headUnitSps(raw, s, e - s, cropSps(raw, s, e - s))
+                writeNal(out, nal, 0, nal.size)
+            } else {
+                writeNal(out, raw, s, e - s)
+            }
+        }
+        return out.toByteArray()
+    }
+
+    private fun cropSps(b: ByteArray, off: Int, len: Int) = SpsCrop.crop(b, off, len, HeadUnitScreenConfig.getWidthMargin() / 2,
+        HeadUnitScreenConfig.getHeightMargin() / 2, visibleWidth(), visibleHeight())
+
+    /** SPS для ГУ: с обрезкой до полосы, а если полей нет (480p) — исходный, без перезаписи. */
+    private fun headUnitSps(b: ByteArray, off: Int, len: Int, cropped: SpsCrop.Result): ByteArray =
+        if (HeadUnitScreenConfig.getWidthMargin() == 0 && HeadUnitScreenConfig.getHeightMargin() == 0) b.copyOfRange(off, off + len)
+        else cropped.nal
 
     /** Кадр от AA (поток видео OHU): Annex-B, одна единица доступа. */
     private fun onAccessUnit(buf: ByteArray, off: Int, len: Int) {
@@ -204,16 +236,17 @@ object DirectProjection {
         forEachNal(buf, off, len) { s, e ->
             when (buf[s].toInt() and 31) {
                 7 -> {
-                    val r = SpsCrop.crop(buf, s, e - s, HeadUnitScreenConfig.getWidthMargin() / 2,
-                        HeadUnitScreenConfig.getHeightMargin() / 2, visibleWidth(), visibleHeight())
+                    val r = cropSps(buf, s, e - s)
+                    val nal = headUnitSps(buf, s, e - s, r)
                     if (sps == null) {
                         EventLog.add("Экран машины: поток AA H.264 профиль ${r.profile} уровень ${r.level / 10}.${r.level % 10}, " +
                             "${r.codedWidth}x${r.codedHeight}, " +
-                            "на ГУ — ${visibleWidth()}x${visibleHeight()} из середины кадра")
+                            "на ГУ — ${visibleWidth()}x${visibleHeight()} из середины кадра\n" +
+                            "    SPS AA: ${EventLog.hex(buf, s, e - s, 64)}\n    SPS на ГУ: ${EventLog.hex(nal, 0, nal.size, 64)}")
                     }
-                    sps = r.nal
+                    sps = nal
                     hasConfig = true
-                    writeNal(out, r.nal, 0, r.nal.size)
+                    writeNal(out, nal, 0, nal.size)
                 }
                 8 -> {
                     pps = buf.copyOfRange(s, e)

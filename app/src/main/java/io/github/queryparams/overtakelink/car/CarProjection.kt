@@ -209,11 +209,14 @@ class CarProjection private constructor(context: Context, display: Display) :
     companion object {
         private val main = Handler(Looper.getMainLooper())
 
-        /** Настройки приёмника AA под перекодирование: AA сам выбирает размер, картинка растягивается на окно. */
+        /**
+         * Настройки приёмника AA под перекодирование: AA рисует 1080p и раскладывает интерфейс в полосе
+         * экрана машины (поля сверху и снизу), полоса попадает в кодировщик пиксель в пиксель, без растяжения.
+         */
         @JvmStatic
         fun prepareSettings(settings: com.andrerinas.openheadunit.utils.Settings) {
-            settings.resolutionId = com.andrerinas.openheadunit.utils.Settings.Resolution.AUTO.id
-            settings.videoFitMode = com.andrerinas.openheadunit.utils.Settings.VideoFitMode.FILL
+            settings.resolutionId = com.andrerinas.openheadunit.utils.Settings.Resolution._1920x1080.id
+            settings.videoFitMode = com.andrerinas.openheadunit.utils.Settings.VideoFitMode.CONTAIN
             settings.videoCodec = "Auto"
             // 30 к/с: ГУ всё равно показывает ~24, а распаковывать вдвое меньше кадров — меньше расход батареи.
             settings.fpsLimit = 30

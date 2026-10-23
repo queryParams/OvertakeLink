@@ -60,8 +60,8 @@
     <string name="ol_setup_3_title">Cable and default app</string>
     <string name="ol_setup_3_text">Connect the phone to the car’s USB port with a cable.\nAndroid will ask which app should open “QDriveLink” — choose OvertakeLink and tick “Always”.\nThe first time, Android Auto will ask you on the phone to accept its terms and allow notification access — do it while parked.\nIt’s best to uninstall the stock QDLink app.</string>
     <string name="ol_setup_3_action">Got it</string>
-    <string name="ol_setup_4_title">Bluetooth: audio and steering wheel</string>
-    <string name="ol_setup_4_text">Android Auto sound goes to the car over Bluetooth, just like your music does now. Make sure the phone is connected to the car.\nThe voice button on the steering wheel opens the Assistant on the car screen. On the first press Android will ask which app to use — choose OvertakeLink and “Always”.</string>
+    <string name="ol_setup_4_title">Bluetooth: audio and steering wheel buttons</string>
+    <string name="ol_setup_4_text">Android Auto sound goes to the car over Bluetooth, just like your music does now. Make sure the phone is connected to the car.\nSteering wheel “next / previous” switch tracks while the head unit’s Bluetooth player is open. The voice button on the steering wheel is not supported yet — call the Assistant with the microphone icon on the car screen.</string>
     <string name="ol_setup_4_action">Open Bluetooth</string>
     <string name="ol_done">Done</string>
     <string name="ol_next">Next</string>
@@ -77,10 +77,11 @@
     <string name="ol_video_title">Video to the car screen</string>
     <string name="ol_video_transcode_note">Compatible: the phone re-encodes the picture for the car screen. Slower, but works with any head unit.</string>
     <string name="ol_video_direct_note">Direct: the Android Auto picture goes to the car without re-encoding — lower latency, sharper, and the phone runs cooler.</string>
-    <string name="ol_video_direct">Direct (faster)</string>
-    <string name="ol_video_direct_light">Direct light (720p)</string>
+    <string name="ol_video_direct">Direct 1080p (sharpest)</string>
+    <string name="ol_video_direct_light">Direct 720p</string>
+    <string name="ol_video_direct_small">Direct 480p (smaller picture)</string>
     <string name="ol_video_transcode">Compatible (more reliable)</string>
-    <string name="ol_video_hint">If the car screen stays black in direct mode, try light; if that doesn’t help, choose compatible. Applies the next time you plug in the cable.</string>
+    <string name="ol_video_hint">If the car screen stays black in direct mode, try 720p, then 480p; if that doesn’t help, choose compatible. Applies the next time you plug in the cable.</string>
 
     <string name="ol_save_log">Save log</string>
     <string name="ol_saved">Saved: %1$s</string>

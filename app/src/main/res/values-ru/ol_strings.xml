@@ -60,8 +60,8 @@
     <string name="ol_setup_3_title">Кабель и выбор по умолчанию</string>
     <string name="ol_setup_3_text">Подключите телефон кабелем к USB машины.\nAndroid спросит, чем открыть «QDriveLink» — выберите OvertakeLink и отметьте «Всегда».\nВ первый раз Android Auto попросит на телефоне принять условия и дать доступ к уведомлениям — сделайте это на стоянке.\nРодной QDLink лучше удалить.</string>
     <string name="ol_setup_3_action">Понятно</string>
-    <string name="ol_setup_4_title">Bluetooth: звук и руль</string>
-    <string name="ol_setup_4_text">Звук Android Auto идёт в машину по Bluetooth, как сейчас музыка. Проверьте, что телефон подключён к машине.\nГолосовая кнопка на руле открывает Ассистента на экране машины. При первом нажатии Android спросит, чем выполнить, — выберите OvertakeLink и «Всегда».</string>
+    <string name="ol_setup_4_title">Bluetooth: звук и кнопки руля</string>
+    <string name="ol_setup_4_text">Звук Android Auto идёт в машину по Bluetooth, как сейчас музыка. Проверьте, что телефон подключён к машине.\nКнопки руля «вперёд / назад» переключают треки, когда на ГУ открыт Bluetooth-плеер. Голосовая кнопка руля пока не поддерживается — Ассистента зовите значком микрофона на экране машины.</string>
     <string name="ol_setup_4_action">Открыть Bluetooth</string>
     <string name="ol_done">Готово</string>
     <string name="ol_next">Дальше</string>
@@ -77,10 +77,11 @@
     <string name="ol_video_title">Видео на экран машины</string>
     <string name="ol_video_transcode_note">Совместимый: телефон перепаковывает картинку под экран машины. Медленнее, но работает с любым ГУ.</string>
     <string name="ol_video_direct_note">Прямой: картинка Android Auto идёт в машину без перепаковки — меньше задержка, чётче, телефон меньше греется.</string>
-    <string name="ol_video_direct">Прямой (быстрее)</string>
-    <string name="ol_video_direct_light">Прямой облегчённый (720p)</string>
+    <string name="ol_video_direct">Прямой 1080p (чётче всего)</string>
+    <string name="ol_video_direct_light">Прямой 720p</string>
+    <string name="ol_video_direct_small">Прямой 480p (картинка мельче)</string>
     <string name="ol_video_transcode">Совместимый (надёжнее)</string>
-    <string name="ol_video_hint">Если в прямом режиме на экране машины чёрный экран — попробуйте облегчённый, не помогло — совместимый. Применяется при следующем подключении кабеля.</string>
+    <string name="ol_video_hint">Если в прямом режиме на экране машины чёрный экран — попробуйте 720p, затем 480p, не помогло — совместимый. Применяется при следующем подключении кабеля.</string>
 
     <string name="ol_save_log">Сохранить лог</string>
     <string name="ol_saved">Сохранено: %1$s</string>

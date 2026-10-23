@@ -19,7 +19,8 @@ final class SplashFrame {
     private SplashFrame() {
     }
 
-    static byte[] encode(int width, int height, String text) throws Exception {
+    /** Кадр width × height, текст — по центру, в полосе высотой band (видимая на ГУ часть кадра). */
+    static byte[] encode(int width, int height, int band, String text) throws Exception {
         MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
@@ -34,7 +35,7 @@ final class SplashFrame {
             codec.start();
             for (int i = 0; i < 2; i++) {
                 Canvas c = input.lockHardwareCanvas();
-                draw(c, width, height, text);
+                draw(c, width, height, band, text);
                 input.unlockCanvasAndPost(c);
             }
             codec.signalEndOfInputStream();
@@ -72,11 +73,11 @@ final class SplashFrame {
         }
     }
 
-    private static void draw(Canvas c, int width, int height, String text) {
+    private static void draw(Canvas c, int width, int height, int band, String text) {
         c.drawColor(Color.BLACK);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         p.setColor(Color.WHITE);
-        p.setTextSize(height / 9f);
+        p.setTextSize(band / 9f);
         p.setTextAlign(Paint.Align.CENTER);
         String[] lines = text.split("\n");
         float widest = 0;

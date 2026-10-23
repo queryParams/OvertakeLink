@@ -10,7 +10,7 @@ maps, music, calls, the Assistant — with touch control.
 
 - nothing is installed on the head unit, the car is not modified;
 - works while the phone is locked and in your pocket;
-- steering wheel “next / previous / pause” buttons control music, the voice button opens the Assistant on the car screen;
+- the Assistant — with the microphone icon on the car screen;
 - sound goes to the car over Bluetooth, as usual.
 
 > OvertakeLink is an independent hobby project, not affiliated with Neusoft (the QDLink developer),
@@ -44,8 +44,10 @@ maps, music, calls, the Assistant — with touch control.
 
 After that everything works by itself: get in, plug in the cable — Android Auto is on the car screen.
 
-**Steering wheel “next / previous” buttons** go to whichever audio source is selected on the head
-unit. If they don’t work, open the head unit’s stock Bluetooth player once.
+**Steering wheel buttons.** The car sends “next / previous” to whichever audio source is selected
+on the head unit: they switch tracks only while the head unit’s stock Bluetooth player is open. The
+steering wheel voice button is not supported yet — call the Assistant with the microphone icon on
+the car screen.
 
 **Updates:** OvertakeLink checks for new versions by itself and shows a “Download and install”
 button on the main screen: the app downloads the new version and opens the installer. The first
@@ -87,8 +89,9 @@ from the file (more in [Privacy](PRIVACY.md)).
 - Other head units with the same QDLink format will most likely work too: OvertakeLink takes the
   screen size from the head unit itself. Head units with other QDLink protocol versions are not
   supported yet.
-- The head unit decoder must accept H.264 1080p at 30 fps (direct mode) — if the car screen stays
-  black, choose “Direct light” (720p) or “Compatible”.
+- Direct mode depends on the head unit decoder: if the car screen stays black, try “Direct 720p”,
+  then “Direct 480p”; if that doesn’t help, choose “Compatible”. On the Geely Atlas Pro 2023 direct
+  mode does not work yet; compatible does.
 
 **Tested:** Xiaomi 14 Ultra (Android 15, HyperOS) + Geely Atlas Pro 2023; Android 15 emulator with a
 head unit simulator. Other combinations — please report how it went.
@@ -130,9 +133,14 @@ Video modes:
 - **Direct** — H.264 from Android Auto is passed to the head unit as is: AA draws a 1080p frame, and
   cropping to the car screen strip is written into the stream header (SPS). Minimal latency and
   battery use.
-- **Direct light** — the same at 720p; the head unit scales the picture to the screen.
-- **Compatible** — AA video is decoded into a window on a virtual display and re-encoded for the
-  car screen. Slower, but independent of the head unit decoder’s capabilities.
+- **Direct 720p** — the same at 720p; the head unit scales the picture to the screen.
+- **Direct 480p** — an 800×480 frame, entirely smaller than the car screen, without cropping; the
+  head unit scales it to the screen, AA draws with compensation for stretched pixels. Softer
+  picture, but the frame is never larger than the screen.
+- **Compatible** — AA draws 1080p with the interface in the car screen strip; the phone decodes the
+  video and re-encodes that strip pixel for pixel for the car screen (6 Mbit/s). Slightly more
+  latency, but the stream is the same as the stock QDLink one and independent of the head unit
+  decoder’s capabilities.
 
 ## Building
 
@@ -156,7 +164,9 @@ a car.
 
 - The Android Auto head unit server is a developer mode; Google may change its behavior in new
   AA versions.
-- Steering wheel buttons that the car doesn’t pass over Bluetooth are not available to the phone.
+- The steering wheel voice button is not supported; “next / previous” work only while the head
+  unit’s Bluetooth player is selected. Buttons the car doesn’t pass over Bluetooth are not available
+  to the phone.
 - Wireless connection (QDLink over Wi‑Fi) is not implemented yet.
 - Not published on Google Play: the app relies on the Android Auto developer mode.
 

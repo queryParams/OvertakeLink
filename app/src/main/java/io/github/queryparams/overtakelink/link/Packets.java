@@ -20,6 +20,9 @@ public final class Packets {
         public int appCapture = 1;
         public int phoneWidth;
         public int phoneHeight;
+        /** Размер кадра в потоке, если он не совпадает с экраном (прямой режим); 0 — как width × height. */
+        public int frameWidth;
+        public int frameHeight;
     }
 
     /** Размер, дополненный нулями до кратного 512: по USB пакеты идут целыми блоками. */

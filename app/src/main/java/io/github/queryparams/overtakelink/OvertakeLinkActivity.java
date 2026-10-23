@@ -399,6 +399,8 @@ public final class OvertakeLinkActivity extends Activity {
         video.addView(button(getString(R.string.ol_video_direct), OvertakeLinkService.VIDEO_DIRECT.equals(mode), v -> setVideoMode(OvertakeLinkService.VIDEO_DIRECT)));
         video.addView(button(getString(R.string.ol_video_direct_light), OvertakeLinkService.VIDEO_DIRECT_LIGHT.equals(mode),
                 v -> setVideoMode(OvertakeLinkService.VIDEO_DIRECT_LIGHT)));
+        video.addView(button(getString(R.string.ol_video_direct_small), OvertakeLinkService.VIDEO_DIRECT_SMALL.equals(mode),
+                v -> setVideoMode(OvertakeLinkService.VIDEO_DIRECT_SMALL)));
         video.addView(button(getString(R.string.ol_video_transcode), OvertakeLinkService.VIDEO_TRANSCODE.equals(mode),
                 v -> setVideoMode(OvertakeLinkService.VIDEO_TRANSCODE)));
         video.addView(text(getString(R.string.ol_video_hint), 12, MUTED, false));

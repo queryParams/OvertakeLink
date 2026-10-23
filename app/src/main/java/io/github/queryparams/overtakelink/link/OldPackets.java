@@ -117,7 +117,7 @@ public final class OldPackets {
         b.putInt(8, total);
         b.putInt(92, len);
         b.putInt(100, v.phoneWidth).putInt(104, v.phoneHeight);
-        b.putInt(116, v.width).putInt(120, v.height);
+        b.putInt(116, v.frameWidth > 0 ? v.frameWidth : v.width).putInt(120, v.frameHeight > 0 ? v.frameHeight : v.height);
         b.putInt(132, 3);
         b.putInt(136, v.angle);
         b.putInt(140, v.orientation);

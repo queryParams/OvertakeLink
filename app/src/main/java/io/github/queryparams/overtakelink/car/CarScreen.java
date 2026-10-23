@@ -163,19 +163,6 @@ public final class CarScreen {
         }
     }
 
-    /** Битрейт, который попросило ГУ (приходит позже, чем поднимается экран). */
-    public void setBitRate(int bitRate) {
-        MediaCodec c = codec;
-        if (c != null && bitRate > 0) {
-            Bundle b = new Bundle();
-            b.putInt(MediaCodec.PARAMETER_KEY_VIDEO_BITRATE, bitRate);
-            try {
-                c.setParameters(b);
-            } catch (IllegalStateException ignored) {
-            }
-        }
-    }
-
     public void stop() {
         if (current == this) {
             current = null;
