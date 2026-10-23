@@ -12,16 +12,16 @@ import org.junit.Test
 import org.mockito.Mockito.*
 
 class UsbSettingsPermissionTest {
-    @Test fun `late permission distinguishes cancellation from expired or overtaken Save`() {
+    @Test fun `late permission distinguishes cancellation from expired or overtakelinkn Save`() {
         mockStatic(android.os.SystemClock::class.java).use {
         mockStatic(androidx.appcompat.app.AppCompatDelegate::class.java).use {
-            for (outcome in listOf("cancelled", "expired", "overtaken")) {
+            for (outcome in listOf("cancelled", "expired", "overtakelinkn")) {
             val service = mock(AapService::class.java)
             val app = mock(App::class.java)
             val component = mock(AppComponent::class.java)
             val comm = mock(CommManager::class.java, CALLS_REAL_METHODS)
             val saved = CommManager.ConnectionState.Disconnected(reason = CommManager.DisconnectReason.SETTINGS_RESTART, settingsRestartUntilMs = if (outcome == "expired") 0 else Long.MAX_VALUE)
-            val current = if (outcome == "overtaken") CommManager.ConnectionState.Disconnected() else saved
+            val current = if (outcome == "overtakelinkn") CommManager.ConnectionState.Disconnected() else saved
             val states = MutableStateFlow<CommManager.ConnectionState>(current)
             fun set(name: String, value: Any) = CommManager::class.java.getDeclaredField(name)
                 .apply { isAccessible = true }.set(comm, value)

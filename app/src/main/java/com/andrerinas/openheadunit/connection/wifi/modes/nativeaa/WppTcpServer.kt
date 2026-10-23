@@ -348,7 +348,7 @@ class WppTcpServer(
         val rejects = WppTcpServePolicy.rejectsDial(decision, callbacks.canRunRfcomm(), projectionUp)
         if (WppTcpServePolicy.raisesStaleEndpointRecord(callbacks.strategy(), callbacks.identity(), rejects)) {
             // Once, not per dial: the phone re-dials on its own backoff and a moving stamp would
-            // overtake the user's dismissal every time.
+            // overtakelink the user's dismissal every time.
             ConnectionIssues.raiseOnce(context, ConnectionIssue.PHONE_HOLDS_STALE_ENDPOINT)
             // What retires it is a Bluetooth handshake landing with no dial beside it, which only the
             // owner sees. A served dial cannot do it: a rejection that works stops the dialling.

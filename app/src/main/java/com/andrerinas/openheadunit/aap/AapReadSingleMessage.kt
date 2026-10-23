@@ -34,7 +34,9 @@ internal class AapReadSingleMessage(
             // Once any frame prefix is consumed, an incomplete remainder cannot be skipped:
             // there is no delimiter from which to rediscover the next header safely.
             val isSocket = connection is SocketProjectionConnection
-            val timeout = if (isSocket) 15000 else 0
+            // OvertakeLink: Android Auto на этом же телефоне, его смерть — сразу EOF. Молчать он вправе
+            // (например, пока на телефоне проходят его первую настройку), так что без тайм-аута.
+            val timeout = if (isSocket && io.github.queryparams.overtakelink.car.CarScreen.current() == null) 15000 else 0
             val headerSize = connection.recvBlocking(recvHeader.buf, recvHeader.buf.size, timeout, true)
             when (AapReadRecoveryPolicy.afterHeaderRead(headerSize, AapMessageIncoming.EncryptedHeader.SIZE, isSocket)) {
                 AapReadRecoveryPolicy.Outcome.CONTINUE -> {

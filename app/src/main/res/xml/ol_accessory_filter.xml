@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ГУ Geely с QDLink представляется как USB-аксессуар Neusoft / QDriveLink (у некоторых — AndroidLink). -->
+<resources>
+    <usb-accessory manufacturer="Neusoft" model="QDriveLink" />
+    <usb-accessory manufacturer="AndroidLink" model="AndroidLink" />
+</resources>

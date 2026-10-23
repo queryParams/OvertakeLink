@@ -116,7 +116,7 @@ class ConnectionIssuesTest {
 
     @Test
     fun `raising once leaves a standing stamp where it is`() {
-        // The poke loop re-detects its condition every pass. A moving stamp would overtake the
+        // The poke loop re-detects its condition every pass. A moving stamp would overtakelink the
         // user's dismissal every time and the banner could never be dismissed at all.
         val store = FakeStore()
         ConnectionIssues.raiseOnce(store, ConnectionIssue.HANDS_FREE_HELD_ELSEWHERE, 1_000L)

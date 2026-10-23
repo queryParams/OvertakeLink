@@ -107,13 +107,14 @@
         android:name=".App"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/title"
+        android:label="OvertakeLink"
         android:largeHeap="true"
         android:supportsRtl="true"
         tools:ignore="GoogleAppIndexingWarning">
 
         <activity
             android:name=".aap.AapProjectionActivity"
+            android:allowEmbedded="true"
             android:configChanges="uiMode|orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"
             android:exported="true"
             android:hardwareAccelerated="true"
@@ -156,13 +157,6 @@
             android:launchMode="singleTask"
             android:theme="@style/SplashTheme">
 
-            <!-- Primary Launcher Filter -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
 
             <!-- Navigation Role Registration (allows selecting as default nav app) -->
             <intent-filter>
@@ -461,5 +455,51 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+        <!-- OvertakeLink: свой интерфейс, приём машины по USB (QDLink) и связка с проекцией Android Auto -->
+        <activity
+            android:name="io.github.queryparams.overtakelink.OvertakeLinkActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:label="OvertakeLink"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="io.github.queryparams.overtakelink.UsbAttachActivity"
+            android:taskAffinity=""
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_ACCESSORY_ATTACHED"
+                android:resource="@xml/ol_accessory_filter" />
+        </activity>
+
+        <activity
+            android:name="io.github.queryparams.overtakelink.VoiceCommandActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:label="OvertakeLink: Ассистент на экране машины"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name="io.github.queryparams.overtakelink.OvertakeLinkService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice|microphone" />
     </application>
 </manifest>

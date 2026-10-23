@@ -268,6 +268,8 @@ object AppLog {
 
     private fun log(priority: Int, msg: String) {
         LOGGER.println(priority, TAG, msg)
+        // OvertakeLink: важное от приёмника Android Auto — и в журнал OvertakeLink, его можно выгрузить без компьютера.
+        if (priority >= Log.INFO && io.github.queryparams.overtakelink.link.EventLog.isStarted()) io.github.queryparams.overtakelink.link.EventLog.add("AA: $msg")
     }
 
     private fun isLoggable(priority: Int): Boolean = priority >= LOG_LEVEL
@@ -283,6 +285,9 @@ object AppLog {
     private fun loge(message: String, tr: Throwable?) {
         val trace = if (tr != null) Log.getStackTraceString(tr) else ""
         LOGGER.println(Log.ERROR, TAG, if (trace.isEmpty()) message else "$message\n$trace")
+        if (io.github.queryparams.overtakelink.link.EventLog.isStarted()) {
+            io.github.queryparams.overtakelink.link.EventLog.add("AA ОШИБКА: $message" + if (trace.isEmpty()) "" else "\n$trace")
+        }
     }
 
     private fun closeAppLogFileLogger() {

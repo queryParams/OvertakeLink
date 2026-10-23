@@ -16,7 +16,8 @@ enum class WifiLauncherMode(
 
     companion object {
 
-        val DEFAULT: WifiLauncherMode = NATIVE
+        // OvertakeLink: беспроводные режимы не нужны — AA на этом же телефоне, связь через localhost.
+        val DEFAULT: WifiLauncherMode = MANUAL
 
 
         fun byIdOrDefault(id: Int): WifiLauncherMode {

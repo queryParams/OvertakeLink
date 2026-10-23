@@ -717,6 +717,13 @@ class AapService : Service() {
     private val wakeDetectReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val action = intent.action ?: return
+            // OvertakeLink: это телефон, а не головное устройство. Погасший экран, зарядка и прочие
+            // «сигналы зажигания» здесь ничего не говорят о машине; сон экрана останавливал бы
+            // видео AA и закрывал микрофон.
+            if (io.github.queryparams.overtakelink.car.CarScreen.current() != null && action != Intent.ACTION_SHUTDOWN) {
+                AppLog.i("WakeDetect: $action ignored, OvertakeLink runs the car screen")
+                return
+            }
 
             when (action) {
                 Intent.ACTION_SCREEN_OFF -> {
@@ -1459,6 +1466,11 @@ class AapService : Service() {
      *   call screen's own full-screen intent.
      */
     private fun launchAapProjectionActivity(allowNotificationFallback: Boolean = true): Boolean {
+        // OvertakeLink: проекция идёт на экран машины, свой экран проекции на телефоне не поднимаем.
+        if (io.github.queryparams.overtakelink.car.CarScreen.current() != null) {
+            AppLog.i("AapService: OvertakeLink shows the projection on the car screen, the activity is not raised")
+            return true
+        }
         if (App.isPiPActive) {
             AppLog.i("AapService: Skipping projection launch because PiP is active")
             return false

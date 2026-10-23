@@ -120,7 +120,7 @@ internal class MicSessionController(
         }
         if (discarded != 0) {
             val summary = retireLocked(run, discarded)
-            // Queue while holding only the short state lock so a new Open cannot overtake abort.
+            // Queue while holding only the short state lock so a new Open cannot overtakelink abort.
             lifecycle {
                 summary?.let(report)
                 stopCapture()

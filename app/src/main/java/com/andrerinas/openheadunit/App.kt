@@ -45,6 +45,8 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // OvertakeLink: журнал событий, который можно выгрузить с телефона.
+        io.github.queryparams.overtakelink.link.EventLog.init(this)
         registerActivityLifecycleCallbacks(this)
 
         try {

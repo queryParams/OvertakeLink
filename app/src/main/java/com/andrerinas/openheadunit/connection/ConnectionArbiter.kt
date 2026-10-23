@@ -38,7 +38,7 @@ object ConnectionArbiter {
     private var usbOwed = false
     private var owedAfterSession = false
 
-    /** Bumped by every claim, so a scheduled give-back can tell it was overtaken. */
+    /** Bumped by every claim, so a scheduled give-back can tell it was overtakelinkn. */
     private var generation = 0L
     private var quietPending = false
     private var usbEpisodeSinceMs = 0L

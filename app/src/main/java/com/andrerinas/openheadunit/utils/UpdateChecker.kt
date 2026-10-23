@@ -83,11 +83,12 @@ data class UpdateInfo(
 
 object UpdateChecker {
     private const val TAG = "UpdateChecker"
-    private const val GITHUB_RELEASES_API = "https://api.github.com/repos/andreknieriem/open-headunit/releases?per_page=5"
-    const val GITHUB_RELEASES_WEB = "https://github.com/andreknieriem/open-headunit/releases"
+    // OvertakeLink: обновления — из релизов OvertakeLink, а не Open Headunit (у них разные версии и пакеты).
+    private const val GITHUB_RELEASES_API = "https://api.github.com/repos/${io.github.queryparams.overtakelink.UpdateCheck.REPO}/releases?per_page=5"
+    const val GITHUB_RELEASES_WEB = "https://github.com/${io.github.queryparams.overtakelink.UpdateCheck.REPO}/releases"
 
     fun isPlayStoreInstallation(context: Context): Boolean {
-        if (BuildConfig.FLAVOR == "playstore") return true
+        // OvertakeLink: в Google Play его нет — вариант сборки playstore не значит «установлен из Play».
         return try {
             val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName

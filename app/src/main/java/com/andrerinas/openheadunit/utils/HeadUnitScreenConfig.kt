@@ -173,6 +173,16 @@ object HeadUnitScreenConfig {
 
 
     fun init(context: Context, displayMetrics: DisplayMetrics, settings: Settings) {
+        // OvertakeLink: пока поднят экран машины, Android Auto рисует для него, а не для экрана телефона.
+        val car = io.github.queryparams.overtakelink.car.CarScreen.windowContext(context)
+        if (car != null) {
+            initFor(car, car.resources.displayMetrics, settings)
+        } else {
+            initFor(context, displayMetrics, settings)
+        }
+    }
+
+    private fun initFor(context: Context, displayMetrics: DisplayMetrics, settings: Settings) {
         videoFitMode = settings.videoFitMode
         forcedScale = settings.forcedScale && settings.viewMode == Settings.ViewMode.SURFACE
 

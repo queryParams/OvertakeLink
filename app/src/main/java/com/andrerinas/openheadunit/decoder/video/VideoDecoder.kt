@@ -932,7 +932,14 @@ class VideoDecoder(
      * for a keyframe - see [notifyFrameDropped] for the shape of that ask and why it stays silent
      * before the first rendered frame.
      */
+    /** OvertakeLink, прямой режим: поток AA уходит на ГУ как есть, декодер не участвует. */
+    @Volatile var passthrough: ((ByteArray, Int, Int) -> Unit)? = null
+
     fun decode(buffer: ByteArray, offset: Int, size: Int, forceSoftware: Boolean, codecName: String) {
+        passthrough?.let {
+            it(buffer, offset, size)
+            return
+        }
         val frame = synchronized(this) {
             // Input-side liveness: bytes are arriving from the phone right now.
             lastInputBytesReceivedMs = elapsedRealtime()

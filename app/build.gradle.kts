@@ -9,7 +9,6 @@ plugins {
 
 android {
     compileSdk = 36
-    ndkVersion = "29.0.14206865"
     namespace = "com.andrerinas.openheadunit"
 
     buildFeatures {
@@ -17,12 +16,6 @@ android {
         aidl = true // needed for shizuku
     }
 
-    externalNativeBuild {
-        cmake {
-            path("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
 
     val copyRootAssets = tasks.register<Copy>("copyRootAssets") {
         from("${project.rootDir}/CHANGELOG.md", "${project.rootDir}/LICENSE")
@@ -93,11 +86,13 @@ android {
         // installs, testers) and existing users just get a normal update. Only the display name
         // changed to Open Headunit. The code package and namespace stay openheadunit, so the
         // applicationId deliberately differs from the namespace, like com.google.talk for Hangouts.
-        applicationId = "com.andrerinas.headunitrevived"
-        minSdk = 16
+        applicationId = "io.github.queryparams.overtakelink"
+        // OvertakeLink: виртуальный дисплей машины (createWindowContext) и FGS с микрофоном — Android 12+.
+        minSdk = 31
         targetSdk = 36
-        versionCode = 120
-        versionName = "4.0.0-alpha"
+        // OvertakeLink: код версии = мажор*10000 + минор*100 + патч, всегда выше кодов Open Headunit.
+        versionCode = 600
+        versionName = "0.6"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
@@ -107,23 +102,19 @@ android {
         // This is scanned at build time from values-XX directories
         buildConfigField("String", "AVAILABLE_LOCALES", "\"${availableLocales.joinToString(",")}\"")
         buildConfigField("String", "GIT_SHA", "\"$gitDescription\"")
+        // OvertakeLink: канал к имитатору ГУ по TCP — в отладке всегда, в релизе только по -PolSim
+        // (проверка сжатого релизного кода в эмуляторе); пользовательские релизы собираются без него.
+        buildConfigField("boolean", "SIM_LINK", (project.hasProperty("olSim")).toString())
 
-        externalNativeBuild {
-            cmake {
-                cppFlags("")
-            }
-        }
     }
 
     flavorDimensions.add("distribution")
     productFlavors {
         create("playstore") {
             dimension = "distribution"
-            minSdk = 21
         }
         create("github") {
             dimension = "distribution"
-            // Default minSdk 16 from defaultConfig is used
         }
     }
 
@@ -187,6 +178,7 @@ android {
         }
 
         getByName("debug") {
+            buildConfigField("boolean", "SIM_LINK", "true")
             // debugging setup
         }
     }
