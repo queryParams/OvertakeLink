@@ -7,6 +7,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
 import com.andrerinas.openheadunit.App
+import com.andrerinas.openheadunit.R
 import com.andrerinas.openheadunit.aap.AapService
 import com.andrerinas.openheadunit.aap.protocol.messages.TouchEvent
 import com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent
@@ -51,8 +52,6 @@ object DirectProjection {
     private var downTime = 0L
     private val splashes = HashMap<String, ByteArray>()
 
-    private const val STARTING = "OvertakeLink\nЗапускаем Android Auto…"
-    private const val CLOSED = "Android Auto закрыт\nКоснитесь экрана, чтобы открыть снова"
 
     /**
      * Настройки приёмника AA под прямой режим: H.264, интерфейс в полосе экрана машины, 30 к/с —
@@ -136,7 +135,7 @@ object DirectProjection {
             is CommManager.ConnectionState.Disconnected -> if (wasProjecting) {
                 wasProjecting = false
                 closed = true
-                showSplash(CLOSED)
+                showSplash(text(R.string.ol_car_closed))
             }
             else -> {}
         }
@@ -167,9 +166,9 @@ object DirectProjection {
             }
             val asked = framesFromAa
             // AA не ответил кадром за секунду (ещё грузится) — пусть на экране будет заставка.
-            main.postDelayed({ if (framesFromAa == asked && sink != null) showSplash(STARTING) }, 1500)
+            main.postDelayed({ if (framesFromAa == asked && sink != null) showSplash(text(R.string.ol_car_starting)) }, 1500)
         } else {
-            showSplash(noticeText ?: if (closed) CLOSED else STARTING)
+            showSplash(noticeText ?: text(if (closed) R.string.ol_car_closed else R.string.ol_car_starting))
         }
     }
 
@@ -181,6 +180,8 @@ object DirectProjection {
     }
 
     @Volatile private var noticeText: String? = null
+
+    private fun text(id: Int) = context?.getString(id) ?: ""
 
     private fun showSplash(text: String) {
         Thread({
@@ -255,7 +256,7 @@ object DirectProjection {
             if (action == MotionEvent.ACTION_UP) {
                 closed = false
                 EventLog.add("Экран машины: касание — открываем Android Auto снова")
-                showSplash(STARTING)
+                showSplash(text(R.string.ol_car_starting))
                 ctx.startService(Intent(ctx, AapService::class.java).setAction(AapService.ACTION_START_SELF_MODE))
             }
             return

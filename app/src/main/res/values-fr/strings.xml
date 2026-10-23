@@ -658,7 +658,6 @@
     <string name="boot_loop_paused_title">Démarrage sans fil mis en pause</string>
     <string name="boot_loop_paused_generic">Cet appareil a redémarré trois fois de suite peu après le lancement du mode sans fil par Open Headunit. Le mode sans fil est donc resté désactivé cette fois. L\'USB fonctionne toujours. Ouvrez l\'application pour le réactiver.</string>
     <string name="boot_loop_paused_native_wifi_direct">Cet appareil a redémarré trois fois de suite peu après le lancement du mode sans fil par Open Headunit. Le mode sans fil est donc resté désactivé cette fois. Sur certains autoradios, la puce Wi-Fi fait planter tout le système quand un téléphone rejoint un réseau Wi-Fi Direct. Essayez de passer Android Auto en mode point d\'accès de l\'autoradio. L\'USB fonctionne toujours.</string>
-    <string name="notification_projection_active">Projection d\'Android Auto active</string>
     <string name="shortcut_connect_title">Connecter</string>
     <string name="shortcut_connect_desc">Connexion automatique au dernier téléphone</string>
     <string name="shortcut_selfmode_title">Mode Self</string>

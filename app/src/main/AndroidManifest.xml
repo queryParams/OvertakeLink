@@ -66,6 +66,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- OvertakeLink: установка обновления, скачанного с GitHub, по кнопке пользователя -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_SUPERUSER" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
@@ -131,8 +133,10 @@
             the app's own task and lingers there, so a later attach can be delivered to a stale
             instance instead of starting a fresh one.
         -->
+        <!-- OvertakeLink: компоненты Open Headunit с android:enabled="false" — части для планшета в машине (автозапуск, кнопки магнитол, OTG); на телефоне только будила бы процесс -->
         <activity
             android:name=".app.UsbAttachedActivity"
+            android:enabled="false"
             android:directBootAware="true"
             android:excludeFromRecents="true"
             android:exported="true"
@@ -278,6 +282,7 @@
              actions are refused unless the user turns on "Allow external configuration". -->
         <receiver
             android:name=".automation.AutomationReceiver"
+            android:enabled="false"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.andrerinas.openheadunit.ACTION_CONNECT" />
@@ -315,6 +320,7 @@
 
         <receiver
             android:name=".app.RemoteControlReceiver"
+            android:enabled="false"
             android:exported="true">
             <intent-filter android:priority="1000">
                 <action android:name="com.android.music.musicservicecommand" />
@@ -330,6 +336,7 @@
              covering both standard Android events and proprietary Chinese headunit broadcasts. -->
         <receiver
             android:name=".connection.carkey.CarKeyBroadcastReceiver"
+            android:enabled="false"
             android:exported="true">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
@@ -354,6 +361,7 @@
 
         <receiver
             android:name=".app.BootCompleteReceiver"
+            android:enabled="false"
             android:directBootAware="true"
             android:exported="true">
             <intent-filter>
@@ -383,6 +391,7 @@
 
         <receiver
             android:name=".app.AutoStartReceiver"
+            android:enabled="false"
             android:directBootAware="true"
             android:exported="true">
             <intent-filter>
@@ -392,6 +401,7 @@
 
         <receiver
             android:name=".app.WifiAutoStartReceiver"
+            android:enabled="false"
             android:directBootAware="true"
             android:exported="true">
             <intent-filter>
@@ -401,6 +411,7 @@
 
         <activity
             android:name=".main.AutomationActivity"
+            android:enabled="false"
             android:excludeFromRecents="true"
             android:exported="true"
             android:noHistory="true"

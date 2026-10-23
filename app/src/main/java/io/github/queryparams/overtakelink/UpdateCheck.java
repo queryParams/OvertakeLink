@@ -38,6 +38,16 @@ public final class UpdateCheck {
         return prefs(context).getString("updateUrl", "https://github.com/" + REPO + "/releases");
     }
 
+    /** Прямая ссылка на APK новой версии или null (тогда — страница релиза). */
+    public static String apkUrl(Context context) {
+        return prefs(context).getString("updateApk", null);
+    }
+
+    /** SHA-256 APK, если GitHub его сообщил, иначе null. */
+    public static String apkSha256(Context context) {
+        return prefs(context).getString("updateApkSha256", null);
+    }
+
     /** В фоне; результат появится на экране при следующей перерисовке. */
     public static void maybeCheck(Context context) {
         SharedPreferences p = prefs(context);
@@ -66,9 +76,23 @@ public final class UpdateCheck {
                 return;
             }
             String version = release.getString("tag_name").replaceFirst("^v", "");
+            String apk = null;
+            String sha256 = null;
+            JSONArray assets = release.optJSONArray("assets");
+            for (int i = 0; assets != null && i < assets.length(); i++) {
+                JSONObject a = assets.getJSONObject(i);
+                if (a.optString("name").endsWith(".apk")) {
+                    apk = a.optString("browser_download_url", null);
+                    String digest = a.optString("digest", "");
+                    sha256 = digest.startsWith("sha256:") ? digest.substring(7) : null;
+                    break;
+                }
+            }
             prefs(context).edit()
                     .putString("updateVersion", version)
                     .putString("updateUrl", release.optString("html_url", downloadUrl(context)))
+                    .putString("updateApk", apk)
+                    .putString("updateApkSha256", sha256)
                     .apply();
             if (newer(version, BuildConfig.VERSION_NAME)) {
                 EventLog.add("Обновление: доступна версия " + version);

@@ -351,7 +351,6 @@
     <string name="reset_usb_option">Скинути USB-підключення</string>
     <string name="reset_usb_timeout">USB-пристрій не знайдено. Перевірте підключення.</string>
     <string name="notification_service_running">Open Headunit запущено</string>
-    <string name="notification_projection_active">Трансляція Android Auto активна</string>
     <string name="shortcut_connect_title">Підключити</string>
     <string name="shortcut_connect_desc">Автопідключення до останнього телефона</string>
     <string name="shortcut_disconnect_title">Відключити</string>

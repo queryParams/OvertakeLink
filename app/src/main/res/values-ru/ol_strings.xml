@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- OvertakeLink: строки своего интерфейса на русском. -->
+<resources>
+    <string name="ol_car_never">машина ещё не подключалась</string>
+    <string name="ol_car_screen">экран машины %1$s</string>
+    <string name="ol_tab_status">Статус</string>
+    <string name="ol_tab_settings">Настройки</string>
+    <string name="ol_tab_log">Журнал</string>
+
+    <string name="ol_update_available">Доступна версия %1$s</string>
+    <string name="ol_update_note">Устанавливается поверх — настройки сохранятся.</string>
+    <string name="ol_update_install">Скачать и установить</string>
+    <string name="ol_update_allow">Разрешите установку и нажмите ещё раз</string>
+    <string name="ol_update_progress">Загрузка… %1$d%%</string>
+    <string name="ol_update_failed">Не скачалось — нажмите ещё раз</string>
+
+    <string name="ol_state_running">Android Auto на экране машины</string>
+    <string name="ol_state_handshake">Подключаемся к машине</string>
+    <string name="ol_state_waiting">Ждём машину</string>
+    <string name="ol_step_hu">ГУ</string>
+    <string name="ol_step_video">Видео</string>
+    <string name="ol_stop">Остановить</string>
+    <string name="ol_connect_manually">Подключить вручную</string>
+
+    <string name="ol_ready">Готовность</string>
+    <string name="ol_ready_count">%1$d из %2$d</string>
+    <string name="ol_ready_fix">" · настроить ›"</string>
+    <string name="ol_check_permissions">Разрешения</string>
+    <string name="ol_check_permissions_ok">выданы</string>
+    <string name="ol_check_permissions_bad">выдать</string>
+    <string name="ol_check_battery">Батарея без ограничений</string>
+    <string name="ol_yes">да</string>
+    <string name="ol_check_battery_bad">настроить</string>
+    <string name="ol_check_aa_server">Сервер Android Auto</string>
+    <string name="ol_check_aa_server_ok">работает</string>
+    <string name="ol_check_aa_server_bad">включить</string>
+    <string name="ol_check_usb">OvertakeLink открывается по кабелю</string>
+    <string name="ol_check_usb_bad">проверится в машине</string>
+    <string name="ol_check_bt">Bluetooth-звук</string>
+    <string name="ol_check_bt_ok">подключён</string>
+    <string name="ol_check_bt_bad">нет подключения</string>
+
+    <string name="ol_terms_title">Условия использования</string>
+    <string name="ol_terms_text">1. OvertakeLink — бесплатная программа с открытым кодом (лицензия GNU AGPL-3.0). Вы можете пользоваться ею, изучать, изменять и распространять на условиях этой лицензии.\n\n2. Программа предоставляется «как есть», без каких-либо гарантий. Вы используете её на свой риск. Авторы не отвечают за любой ущерб — телефону, головному устройству, автомобилю, данным — и за последствия на дороге.\n\n3. Безопасность. Не отвлекайтесь от дороги. Настраивайте OvertakeLink и Android Auto только на стоянке. Соблюдайте ПДД.\n\n4. OvertakeLink — независимый проект и не связан с Geely, Neusoft (QDLink) или Google. Названия этих компаний и их продуктов — товарные знаки владельцев.\n\n5. OvertakeLink использует режим разработчика Android Auto. Google может изменить его в любой момент — тогда OvertakeLink может перестать работать.\n\n6. Данные. OvertakeLink не собирает и никуда не отправляет ваши данные. Журнал работы хранится на телефоне, передаёте его вы сами. Для проверки и загрузки обновлений приложение обращается к GitHub.</string>
+    <string name="ol_terms_license">Полный текст лицензии: %1$s</string>
+    <string name="ol_back">Назад</string>
+    <string name="ol_accept">Принимаю</string>
+    <string name="ol_decline">Не принимаю — закрыть</string>
+
+    <string name="ol_setup_progress">Первая настройка · шаг %1$d из %2$d</string>
+    <string name="ol_setup_0_title">Разрешения</string>
+    <string name="ol_setup_0_text">Уведомления — чтобы OvertakeLink работал в фоне со значком в шторке.\nМикрофон — для голосовых команд Android Auto.</string>
+    <string name="ol_setup_0_action">Выдать разрешения</string>
+    <string name="ol_setup_1_title">Батарея и автозапуск</string>
+    <string name="ol_setup_1_text">HyperOS выгружает фоновые приложения.\nПоставьте «Без ограничений» и включите автозапуск, иначе связь с машиной будет обрываться.</string>
+    <string name="ol_setup_1_action">Открыть настройки батареи</string>
+    <string name="ol_setup_2_title">Сервер Android Auto</string>
+    <string name="ol_setup_2_text">Android Auto → нажать 10 раз на номер версии → ⋮ → «Запустить сервер головного устройства».\nПосле перезагрузки телефона иногда нужно повторить — OvertakeLink напомнит.</string>
+    <string name="ol_setup_2_action">Открыть Android Auto</string>
+    <string name="ol_setup_3_title">Кабель и выбор по умолчанию</string>
+    <string name="ol_setup_3_text">Подключите телефон кабелем к USB машины.\nAndroid спросит, чем открыть «QDriveLink» — выберите OvertakeLink и отметьте «Всегда».\nВ первый раз Android Auto попросит на телефоне принять условия и дать доступ к уведомлениям — сделайте это на стоянке.\nРодной QDLink лучше удалить.</string>
+    <string name="ol_setup_3_action">Понятно</string>
+    <string name="ol_setup_4_title">Bluetooth: звук и руль</string>
+    <string name="ol_setup_4_text">Звук Android Auto идёт в машину по Bluetooth, как сейчас музыка. Проверьте, что телефон подключён к машине.\nГолосовая кнопка на руле открывает Ассистента на экране машины. При первом нажатии Android спросит, чем выполнить, — выберите OvertakeLink и «Всегда».</string>
+    <string name="ol_setup_4_action">Открыть Bluetooth</string>
+    <string name="ol_done">Готово</string>
+    <string name="ol_next">Дальше</string>
+    <string name="ol_open_failed">Не открылось: %1$s</string>
+
+    <string name="ol_launch">Запуск</string>
+    <string name="ol_launch_risk">Используйте на свой риск: приложение распространяется «как есть», без гарантий. Не отвлекайтесь от дороги — настраивайте всё на стоянке.</string>
+    <string name="ol_launch_auto">OvertakeLink запускается сам, когда машина подключена кабелем и Android спросил, чем её открыть.</string>
+    <string name="ol_setup_again">Пройти первую настройку заново</string>
+    <string name="ol_aa_note">Размер интерфейса, кодек, звук и прочее — в расширенных настройках встроенного приёмника Android Auto.</string>
+    <string name="ol_aa_advanced">Расширенные настройки Android Auto</string>
+    <string name="ol_open_aa">Открыть Android Auto</string>
+    <string name="ol_video_title">Видео на экран машины</string>
+    <string name="ol_video_transcode_note">Совместимый: телефон перепаковывает картинку под экран машины. Медленнее, но работает с любым ГУ.</string>
+    <string name="ol_video_direct_note">Прямой: картинка Android Auto идёт в машину без перепаковки — меньше задержка, чётче, телефон меньше греется.</string>
+    <string name="ol_video_direct">Прямой (быстрее)</string>
+    <string name="ol_video_direct_light">Прямой облегчённый (720p)</string>
+    <string name="ol_video_transcode">Совместимый (надёжнее)</string>
+    <string name="ol_video_hint">Если в прямом режиме на экране машины чёрный экран — попробуйте облегчённый, не помогло — совместимый. Применяется при следующем подключении кабеля.</string>
+
+    <string name="ol_save_log">Сохранить лог</string>
+    <string name="ol_saved">Сохранено: %1$s</string>
+    <string name="ol_save_failed">Не сохранилось: %1$s</string>
+    <string name="ol_clear">Очистить</string>
+
+    <string name="ol_alerts">Подсказки</string>
+    <string name="ol_plug_cable">Вставьте кабель в USB машины</string>
+    <string name="ol_car_not_found">Машина не найдена. Вставьте кабель в USB машины</string>
+    <string name="ol_no_usb_permission">Нет разрешения на USB: переподключите кабель и выберите OvertakeLink</string>
+    <string name="ol_usb_busy">USB занят другим приложением: закройте родной QDLink и переподключите кабель</string>
+    <string name="ol_sim_unavailable">Имитатор ГУ %1$s недоступен: %2$s</string>
+    <string name="ol_waiting_hu">Машина подключена, ждём ответа ГУ (до 30 с)</string>
+    <string name="ol_video_failed">Не удалось запустить видео: %1$s</string>
+    <string name="ol_video_failed_direct">Не удалось запустить видео: %1$s. Выберите режим видео «Совместимый»</string>
+    <string name="ol_aa_starting">Экран машины готов, запускаем Android Auto</string>
+    <string name="ol_aa_server_off">Сервер Android Auto выключен</string>
+    <string name="ol_aa_server_off_text">Нажмите → ⋮ → «Запустить сервер головного устройства», затем переподключите кабель</string>
+    <string name="ol_how_to_start">Включите на телефоне сервер Android Auto\n(Android Auto → ⋮ → «Запустить сервер головного устройства»)\nи переподключите кабель</string>
+    <string name="ol_running_direct">%1$d × %2$d · прямой режим</string>
+    <string name="ol_running_transcode">%1$d × %2$d · перекодирование %3$.1f Мбит/с</string>
+    <string name="ol_video_paused">Машина приостановила видео</string>
+    <string name="ol_car_starting">OvertakeLink\nЗапускаем Android Auto…</string>
+    <string name="ol_car_closed">Android Auto закрыт\nКоснитесь экрана, чтобы открыть снова</string>
+</resources>

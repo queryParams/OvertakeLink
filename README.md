@@ -1,164 +1,176 @@
 # OvertakeLink
 
-**Android Auto на штатных головных устройствах с QDLink** — без установки чего-либо на ГУ.
+**English** · [Русский](README.ru.md)
 
-Многие машины Geely из коробки умеют только зеркалить экран телефона через фирменное приложение
-QDLink. OvertakeLink заменяет это приложение на телефоне и вместо зеркала показывает на экране машины
-полноценный Android Auto: карты, музыку, звонки, Ассистента — с управлением касаниями.
+**Android Auto on stock QDLink head units** — nothing to install on the head unit.
 
-- ничего не ставится на ГУ, машина не модифицируется;
-- работает, когда телефон заблокирован и лежит в кармане;
-- кнопки руля «вперёд / назад / пауза» управляют музыкой, голосовая кнопка открывает Ассистента на экране машины;
-- звук идёт в машину по Bluetooth, как обычно.
+Many Geely cars can only mirror the phone screen through the QDLink app out of the box. OvertakeLink
+replaces that app on the phone and shows full Android Auto on the car screen instead of a mirror:
+maps, music, calls, the Assistant — with touch control.
 
-> OvertakeLink — независимый любительский проект, не связанный с Neusoft (разработчик QDLink), Geely
-> или Google. QDLink, Geely и Android Auto — товарные знаки своих владельцев и упоминаются только
-> для указания совместимости.
+- nothing is installed on the head unit, the car is not modified;
+- works while the phone is locked and in your pocket;
+- steering wheel “next / previous / pause” buttons control music, the voice button opens the Assistant on the car screen;
+- sound goes to the car over Bluetooth, as usual.
 
-> **Используйте на свой риск.** OvertakeLink распространяется «как есть», без каких-либо гарантий (см.
-> [LICENSE](LICENSE)). Авторы не отвечают за последствия его использования — в том числе за
-> неисправности телефона, головного устройства или автомобиля и за дорожные ситуации. Не
-> отвлекайтесь от дороги: настраивайте приложение и Android Auto только на стоянке.
+> OvertakeLink is an independent hobby project, not affiliated with Neusoft (the QDLink developer),
+> Geely or Google. QDLink, Geely and Android Auto are trademarks of their owners and are mentioned
+> only to indicate compatibility.
 
-## Установка — для всех
+> **Use at your own risk.** OvertakeLink is provided “as is”, without any warranty (see
+> [LICENSE](LICENSE)). The authors are not liable for the consequences of its use, including
+> malfunctions of the phone, head unit or car and situations on the road. Keep your eyes on the
+> road: set up the app and Android Auto only while parked.
 
-1. **Скачайте** самую свежую версию со страницы [Releases](../../releases): файл `OvertakeLink-x.y.apk`
-   (пока проект в бете, версии помечены как pre-release — это нормально).
-   Откройте его на телефоне. Android попросит разрешить установку из этого источника — разрешите
-   и нажмите «Установить».
-2. Установите **Android Auto** из Google Play, если его ещё нет.
-3. **Откройте OvertakeLink.** Мастер из пяти шагов проведёт по настройке:
-   - разрешения (микрофон для голосовых команд, уведомления);
-   - батарея без ограничений — иначе телефон может «усыплять» связь с машиной;
-   - **сервер Android Auto** — единственный хитрый шаг: в Android Auto 10 раз нажать на номер
-     версии (откроется режим разработчика), затем ⋮ → «Запустить сервер головного устройства».
-     После перезагрузки телефона это нужно повторить — OvertakeLink подскажет прямо на экране машины;
-   - Bluetooth: телефон должен быть подключён к машине, как для музыки.
-4. **Подключите телефон кабелем к USB машины.** Android спросит, чем открыть «QDriveLink», —
-   выберите OvertakeLink и отметьте «Всегда». Родное приложение QDLink лучше удалить.
-5. В первый раз Android Auto попросит на телефоне принять условия и дать доступ к уведомлениям —
-   сделайте это на стоянке.
+## Installation
 
-Дальше всё работает само: сел, вставил кабель — на экране машины Android Auto.
+1. **Download** the latest version from [Releases](../../releases): the `OvertakeLink-x.y.apk` file
+   (while the project is in beta, versions are marked as pre-release — that’s expected).
+   Open it on the phone. Android will ask to allow installs from this source — allow it and tap
+   “Install”.
+2. Install **Android Auto** from Google Play if you don’t have it yet.
+3. **Open OvertakeLink.** A five-step wizard walks you through setup:
+   - permissions (microphone for voice commands, notifications);
+   - unrestricted battery — otherwise the phone may put the car connection to sleep;
+   - **Android Auto server** — the only tricky step: in Android Auto, tap the version number
+     10 times (developer mode opens), then ⋮ → “Start head unit server”. After a phone restart this
+     has to be repeated — OvertakeLink will remind you on the car screen and with a notification
+     on the phone (tapping it opens Android Auto);
+   - Bluetooth: the phone must be connected to the car, as for music.
+4. **Connect the phone to the car’s USB port with a cable.** Android will ask which app should open
+   “QDriveLink” — choose OvertakeLink and tick “Always”. It’s best to uninstall the stock QDLink app.
+5. The first time, Android Auto will ask you on the phone to accept its terms and allow
+   notification access — do it while parked.
 
-**Кнопки руля «вперёд / назад»** машина отдаёт тому источнику звука, который выбран на ГУ. Если они
-не срабатывают, один раз откройте на ГУ штатный Bluetooth-плеер.
+After that everything works by itself: get in, plug in the cable — Android Auto is on the car screen.
 
-**Обновления:** OvertakeLink сам проверяет новые версии и показывает на главном экране кнопку
-«Скачать». Новая версия ставится поверх, настройки сохраняются.
+**Steering wheel “next / previous” buttons** go to whichever audio source is selected on the head
+unit. If they don’t work, open the head unit’s stock Bluetooth player once.
 
-**Если что-то не так:** OvertakeLink → «Журнал» → «Сохранить лог» (журнал также сохраняется сам после
-каждой поездки в `Загрузки/OvertakeLink`). Приложите его к сообщению о проблеме.
+**Updates:** OvertakeLink checks for new versions by itself and shows a “Download and install”
+button on the main screen: the app downloads the new version and opens the installer. The first
+time, Android will ask you to allow OvertakeLink to install apps. The new version installs over
+the old one, settings are kept.
 
-**Вопросы, ошибки, пожелания** — в [Issues](../../issues). Опишите машину (модель, год, прошивку ГУ),
-телефон и приложите журнал. Pull request'ы в проекте отключены: всё обсуждение — через Issues.
-В журнале есть Bluetooth-адрес машины — если не хотите его публиковать, удалите его из файла
-(подробнее — [Конфиденциальность](PRIVACY.md)).
+**Interface language** — English or Russian, following the phone language.
 
-## Что нужно, чтобы работало
+**If something goes wrong:** OvertakeLink → “Log” → “Save log” (the log is also saved automatically
+after every drive to `Downloads/OvertakeLink`). Attach it to your problem report. The log itself is
+in Russian — that’s fine.
 
-**Телефон**
-- **Android 12 или новее** и приложение Android Auto из Google Play.
-- Любой процессор с 2018 года и новее, **от 4 ГБ оперативной памяти** (это требование самого
-  Android Auto; OvertakeLink занимает около 200 МБ).
-- Нагрузка зависит от режима видео (настройки → «Видео на экран машины»):
-  - **совместимый** (по умолчанию) — телефон распаковывает и заново сжимает видео; нужен
-    аппаратный видеокодек H.264 (есть в любом современном телефоне);
-  - **прямой** — телефон только пересылает готовое видео Android Auto: нагрузка от OvertakeLink почти
-    нулевая, задержка меньше, картинка чётче. Попробуйте его — если на экране машины чёрный экран,
-    вернитесь на совместимый.
-- Bluetooth — для звука и кнопок руля. Интернет нужен только картам и онлайн-сервисам Android Auto.
-- USB-кабель с передачей данных (не только зарядки). От USB машины телефон заряжается, но при
-  навигации с включённым экраном заряд может медленно убывать.
+**Questions, bugs, wishes** — in [Issues](../../issues). Describe the car (model, year, head unit
+firmware), the phone and attach the log. Pull requests are disabled: all discussion goes through
+Issues. The log contains the car’s Bluetooth address — if you don’t want to publish it, remove it
+from the file (more in [Privacy](PRIVACY.md)).
 
-**Машина**
-- Штатное ГУ с QDLink, к которому телефон подключается **по USB**.
-- Проверено: **Geely Atlas Pro 2023**, ГУ HW NL3B (экран 1920×590), прошивка SWONL3B0202H5177.00093
-  («прошивка 93»). Это ГУ работает с QDLink в формате пакетов `!BIN`.
-- Другие ГУ с тем же форматом QDLink, скорее всего, тоже заработают: размер экрана OvertakeLink берёт
-  у самого ГУ. ГУ с другими версиями протокола QDLink пока не поддерживаются.
-- Декодер ГУ должен принимать H.264 1080p при 30 кадрах/с (прямой режим) — если на экране машины
-  чёрный экран, выберите «Прямой облегчённый» (720p) или «Совместимый».
+## Requirements
 
-**Проверено:** Xiaomi 14 Ultra (Android 15, HyperOS) + Geely Atlas Pro 2023; эмулятор Android 15
-с имитатором ГУ. Другие сочетания — сообщайте, что получилось.
+**Phone**
+- **Android 12 or newer** and the Android Auto app from Google Play.
+- Any processor from 2018 or newer, **4 GB of RAM or more** (this is Android Auto’s own
+  requirement; OvertakeLink takes about 200 MB).
+- The load depends on the video mode (Settings → “Video to the car screen”):
+  - **compatible** (default) — the phone decodes and re-encodes the video; needs a hardware
+    H.264 codec (every modern phone has one);
+  - **direct** — the phone just forwards Android Auto’s ready video: almost no load from
+    OvertakeLink, lower latency, sharper picture. Try it — if the car screen stays black, switch
+    back to compatible.
+- Bluetooth — for sound and steering wheel buttons. Internet is only needed by maps and Android
+  Auto’s online services.
+- A USB cable that carries data (not charge-only). The phone charges from the car’s USB, but
+  during navigation with the screen on the battery may slowly drain.
 
-## Условия использования
+**Car**
+- A stock head unit with QDLink that the phone connects to **over USB**.
+- Tested: **Geely Atlas Pro 2023**, head unit HW NL3B (1920×590 screen), firmware
+  SWONL3B0202H5177.00093 (“firmware 93”). This head unit speaks QDLink with `!BIN` packets.
+- Other head units with the same QDLink format will most likely work too: OvertakeLink takes the
+  screen size from the head unit itself. Head units with other QDLink protocol versions are not
+  supported yet.
+- The head unit decoder must accept H.264 1080p at 30 fps (direct mode) — if the car screen stays
+  black, choose “Direct light” (720p) or “Compatible”.
 
-При первом запуске OvertakeLink показывает эти условия и работает только после их принятия.
+**Tested:** Xiaomi 14 Ultra (Android 15, HyperOS) + Geely Atlas Pro 2023; Android 15 emulator with a
+head unit simulator. Other combinations — please report how it went.
 
-1. OvertakeLink — бесплатная программа с открытым кодом (лицензия GNU AGPL-3.0). Вы можете пользоваться ею, изучать, изменять и распространять на условиях этой лицензии.
+## Terms of use
 
-2. Программа предоставляется «как есть», без каких-либо гарантий. Вы используете её на свой риск. Авторы не отвечают за любой ущерб — телефону, головному устройству, автомобилю, данным — и за последствия на дороге.
+On first launch OvertakeLink shows these terms and works only after they are accepted.
 
-3. Безопасность. Не отвлекайтесь от дороги. Настраивайте OvertakeLink и Android Auto только на стоянке. Соблюдайте ПДД.
+1. OvertakeLink is free, open-source software (GNU AGPL-3.0 license). You may use, study, modify and distribute it under the terms of that license.
 
-4. OvertakeLink — независимый проект и не связан с Geely, Neusoft (QDLink) или Google. Названия этих компаний и их продуктов — товарные знаки владельцев.
+2. The software is provided “as is”, without any warranty. You use it at your own risk. The authors are not liable for any damage — to your phone, head unit, car or data — or for consequences on the road.
 
-5. OvertakeLink использует режим разработчика Android Auto. Google может изменить его в любой момент — тогда OvertakeLink может перестать работать.
+3. Safety. Keep your eyes on the road. Set up OvertakeLink and Android Auto only while parked. Obey traffic rules.
 
-6. Данные. OvertakeLink не собирает и никуда не отправляет ваши данные. Журнал работы хранится на телефоне, передаёте его вы сами. Для проверки обновлений приложение обращается к GitHub.
+4. OvertakeLink is an independent project and is not affiliated with Geely, Neusoft (QDLink) or Google. Names of these companies and their products are trademarks of their owners.
 
-## Как это работает
+5. OvertakeLink uses the Android Auto developer mode. Google may change it at any time, and OvertakeLink may then stop working.
+
+6. Data. OvertakeLink does not collect or send your data anywhere. The log is stored on your phone, and you share it yourself. The app contacts GitHub to check for and download updates.
+
+## How it works
 
 ```
-Android Auto (на телефоне) ──AAP по localhost──► OvertakeLink ──QDLink по USB──► штатное ГУ
-                                                    ▲                          │
-                                                    └──── касания с экрана ────┘
+Android Auto (on the phone) ──AAP over localhost──► OvertakeLink ──QDLink over USB──► stock head unit
+                                                        ▲                             │
+                                                        └──── touches from screen ────┘
 ```
 
-1. ГУ подключается к телефону по USB как к аксессуару QDLink (`Neusoft / QDriveLink`); Android
-   открывает OvertakeLink.
-2. OvertakeLink ведёт протокол QDLink (формат `!BIN`, пакеты по 512 байт) — ГУ считает, что
-   говорит с родным приложением.
-3. Встроенный приёмник Android Auto (из проекта [Open Headunit](https://github.com/andreknieriem/headunit-revived))
-   подключается к Android Auto на этом же телефоне через его «сервер головного устройства».
-4. Видео Android Auto уходит на экран машины, касания с экрана машины — обратно в Android Auto.
+1. The head unit connects to the phone over USB as a QDLink accessory (`Neusoft / QDriveLink`);
+   Android opens OvertakeLink.
+2. OvertakeLink speaks the QDLink protocol (`!BIN` format, 512-byte packets) — the head unit
+   thinks it is talking to the stock app.
+3. The built-in Android Auto receiver (from [Open Headunit](https://github.com/andreknieriem/headunit-revived))
+   connects to Android Auto on the same phone through its “head unit server”.
+4. Android Auto video goes to the car screen, touches on the car screen go back to Android Auto.
 
-Режимы видео:
+Video modes:
 
-- **Прямой** — H.264 от Android Auto передаётся на ГУ как есть: AA рисует кадр 1080p, а в заголовке
-  потока (SPS) дописывается обрезка до полосы экрана машины. Минимальная задержка и расход батареи.
-- **Прямой облегчённый** — то же в 720p; ГУ растягивает картинку на экран.
-- **Совместимый** — видео AA декодируется в окно на виртуальном дисплее и кодируется заново под
-  экран машины. Медленнее, но не зависит от возможностей декодера ГУ.
+- **Direct** — H.264 from Android Auto is passed to the head unit as is: AA draws a 1080p frame, and
+  cropping to the car screen strip is written into the stream header (SPS). Minimal latency and
+  battery use.
+- **Direct light** — the same at 720p; the head unit scales the picture to the screen.
+- **Compatible** — AA video is decoded into a window on a virtual display and re-encoded for the
+  car screen. Slower, but independent of the head unit decoder’s capabilities.
 
-## Сборка
+## Building
 
-Нужны JDK 17+ и Android SDK. Скрипт `build.sh` ищет их в `~/.local/opt` (поправьте пути под себя):
+You need JDK 17+ and the Android SDK. `build.sh` looks for them in `~/.local/opt` (adjust the paths):
 
 ```sh
-./build.sh                              # отладочный APK (вариант playstore)
-./build.sh assemblePlaystoreRelease     # релиз; подпись — из key.properties (не хранится в репозитории)
-./build.sh testPlaystoreDebugUnitTest   # модульные тесты
+./build.sh                              # debug APK (playstore flavor)
+./build.sh assemblePlaystoreRelease     # release; signing from key.properties (not in the repository)
+./build.sh testPlaystoreDebugUnitTest   # unit tests
 ```
 
-Релизы собираются из варианта `playstore`: вариант `github` из Open Headunit содержит «офлайн-VPN»,
-который на телефоне отключал бы интернет для Android Auto.
+Releases are built from the `playstore` flavor: Open Headunit’s `github` flavor contains an
+“offline VPN” that would cut Android Auto off from the internet on the phone.
 
-Отладочная сборка (и релиз, собранный с `-PolSim`) умеет подключаться к имитатору ГУ по TCP вместо
-USB: `UsbAttachActivity` с extra `sim=хост:порт`. Так весь путь — от протокола QDLink до картинки на
-«экране машины» — проверяется в эмуляторе Android без машины.
+A debug build (and a release built with `-PolSim`) can connect to a head unit simulator over TCP
+instead of USB: `UsbAttachActivity` with the extra `sim=host:port`. This way the whole path — from
+the QDLink protocol to the picture on the “car screen” — is tested in the Android emulator without
+a car.
 
-## Известные ограничения
+## Known limitations
 
-- Сервер головного устройства Android Auto — режим разработчика; Google может изменить его
-  поведение в новых версиях AA.
-- Кнопки руля, которые машина не передаёт по Bluetooth, телефону недоступны.
-- Беспроводное подключение (QDLink по Wi‑Fi) пока не реализовано.
-- Не публикуется в Google Play: приложение опирается на режим разработчика Android Auto.
+- The Android Auto head unit server is a developer mode; Google may change its behavior in new
+  AA versions.
+- Steering wheel buttons that the car doesn’t pass over Bluetooth are not available to the phone.
+- Wireless connection (QDLink over Wi‑Fi) is not implemented yet.
+- Not published on Google Play: the app relies on the Android Auto developer mode.
 
-## Лицензия и авторы
+## License and authors
 
-OvertakeLink — производная работа от [Open Headunit](https://github.com/andreknieriem/headunit-revived)
-(Andre Rinas и участники), который продолжает [headunit](https://github.com/mikereidis/headunit)
-Michael A. Reid. Как и они, распространяется под **GNU Affero General Public License v3.0** — см.
-[LICENSE](LICENSE) и [COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt).
-Оригинальное описание Open Headunit — в [README.OpenHeadunit.md](README.OpenHeadunit.md).
+OvertakeLink is a derivative work of [Open Headunit](https://github.com/andreknieriem/headunit-revived)
+(Andre Rinas and contributors), which continues [headunit](https://github.com/mikereidis/headunit)
+by Michael A. Reid. Like them, it is distributed under the **GNU Affero General Public License v3.0** —
+see [LICENSE](LICENSE) and [COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt](COPYRIGHT_MICHAEL_REID_GPLv3AFFERO.txt).
+The original Open Headunit description is in [README.OpenHeadunit.md](README.OpenHeadunit.md).
 
-К коду OvertakeLink применяются [дополнительные условия](ADDITIONAL-TERMS.md) по разделу 7 AGPL:
-изменённые версии нельзя называть «OvertakeLink» и выдавать за оригинал. Остальные права по AGPL —
-использовать, изучать, изменять и распространять — сохраняются полностью.
+[Additional terms](ADDITIONAL-TERMS.md) under AGPL section 7 apply to OvertakeLink code: modified
+versions may not be called “OvertakeLink” or presented as the original. All other AGPL rights — to
+use, study, modify and distribute — remain in full.
 
-Код OvertakeLink: `app/src/main/java/io/github/queryparams/overtakelink/`; правки Open Headunit отмечены комментарием
-«OvertakeLink» и видны в истории git.
+OvertakeLink code: `app/src/main/java/io/github/queryparams/overtakelink/`; changes to Open Headunit
+are marked with an “OvertakeLink” comment and visible in the git history.

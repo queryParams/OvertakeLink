@@ -429,7 +429,6 @@
     <string name="reset_usb_option">USB-Verbindung zurücksetzen</string>
     <string name="reset_usb_timeout">USB-Gerät nicht gefunden. Bitte Verbindung prüfen.</string>
     <string name="notification_service_running">Open Headunit läuft</string>
-    <string name="notification_projection_active">Android-Auto-Projektion ist aktiv</string>
     <string name="shortcut_connect_title">Verbinden</string>
     <string name="shortcut_connect_desc">Mit zuletzt verbundenem Smartphone verbinden</string>
     <string name="shortcut_selfmode_title">Self Mode</string>

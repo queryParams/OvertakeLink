@@ -18,6 +18,7 @@ import android.os.PowerManager;
 import android.provider.Settings;
 
 import com.andrerinas.openheadunit.BuildConfig;
+import com.andrerinas.openheadunit.R;
 import com.andrerinas.openheadunit.aap.AapService;
 
 import java.io.Closeable;
@@ -57,7 +58,11 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     public enum State { WAITING, HANDSHAKE, RUNNING }
 
     private static final String CHANNEL = "overtakelink";
-    private static final int NOTIFICATION_ID = 7;
+    /** Общий номер уведомления: его же показывает встроенный приёмник Android Auto (AapService). */
+    public static final int NOTIFICATION_ID = 7;
+    /** Отдельный канал с высокой важностью: подсказка должна всплыть, пока человек сидит в машине. */
+    private static final String ALERT_CHANNEL = "overtakelink-alert";
+    private static final int AA_SERVER_OFF_ID = 8;
     /** Больше кадров в очереди к ГУ — уже заметное отставание: пропускаем всё до свежего ключевого кадра. */
     private static final int VIDEO_QUEUE_LIMIT = 3;
     public static final String PREF_VIDEO_MODE = "videoMode";
@@ -73,7 +78,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
 
     private static volatile OvertakeLinkService instance;
     private static volatile State state = State.WAITING;
-    private static volatile String detail = "Вставьте кабель в USB машины";
+    /** null — сервис ещё не запускался: показываем «вставьте кабель». */
+    private static volatile String detail;
 
     private final LinkedBlockingQueue<byte[]> outQueue = new LinkedBlockingQueue<>();
     private PowerManager.WakeLock wakeLock;
@@ -93,8 +99,14 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         return state;
     }
 
-    public static String detail() {
-        return detail;
+    public static String detail(Context c) {
+        String d = detail;
+        return d != null ? d : c.getString(R.string.ol_plug_cable);
+    }
+
+    public static String title(Context c) {
+        return c.getString(state == State.RUNNING ? R.string.ol_state_running
+                : state == State.HANDSHAKE ? R.string.ol_state_handshake : R.string.ol_state_waiting);
     }
 
     public static long connectedAt() {
@@ -115,6 +127,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         EventLog.init(this);
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "OvertakeLink", NotificationManager.IMPORTANCE_LOW));
+        nm.createNotificationChannel(new NotificationChannel(ALERT_CHANNEL, getString(R.string.ol_alerts), NotificationManager.IMPORTANCE_HIGH));
         startForegroundWithMicrophone();
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "overtakelink:link");
         wakeLock.setReferenceCounted(false);
@@ -140,18 +153,20 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     }
 
     private Notification buildNotification() {
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, OvertakeLinkActivity.class),
+        return notification(this);
+    }
+
+    public static Notification notification(Context c) {
+        PendingIntent open = PendingIntent.getActivity(c, 0, new Intent(c, OvertakeLinkActivity.class),
                 PendingIntent.FLAG_IMMUTABLE);
-        PendingIntent stop = PendingIntent.getService(this, 1, new Intent(this, OvertakeLinkService.class).setAction(ACTION_STOP),
+        PendingIntent stop = PendingIntent.getService(c, 1, new Intent(c, OvertakeLinkService.class).setAction(ACTION_STOP),
                 PendingIntent.FLAG_IMMUTABLE);
-        String title = state == State.RUNNING ? "Android Auto на экране машины"
-                : state == State.HANDSHAKE ? "Подключаемся к машине" : "Ждём машину";
-        return new Notification.Builder(this, CHANNEL)
-                .setContentTitle("OvertakeLink · " + title)
-                .setContentText(detail)
+        return new Notification.Builder(c, CHANNEL)
+                .setContentTitle("OvertakeLink · " + title(c))
+                .setContentText(detail(c))
                 .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
                 .setContentIntent(open)
-                .addAction(new Notification.Action.Builder(null, "Стоп", stop).build())
+                .addAction(new Notification.Action.Builder(null, c.getString(R.string.ol_stop), stop).build())
                 .setOngoing(true)
                 .build();
     }
@@ -212,18 +227,18 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         UsbManager usb = getSystemService(UsbManager.class);
         UsbAccessory[] list = usb.getAccessoryList();
         if (list == null || list.length == 0) {
-            idle("Машина не найдена. Вставьте кабель в USB машины");
+            idle(getString(R.string.ol_car_not_found));
             return;
         }
         UsbAccessory acc = list[0];
         EventLog.add("USB: аксессуар «" + acc.getManufacturer() + " / " + acc.getModel() + "», версия " + acc.getVersion());
         if (!usb.hasPermission(acc)) {
-            idle("Нет разрешения на USB: переподключите кабель и выберите OvertakeLink");
+            idle(getString(R.string.ol_no_usb_permission));
             return;
         }
         ParcelFileDescriptor pfd = usb.openAccessory(acc);
         if (pfd == null) {
-            idle("USB занят другим приложением (родной QDLink?)");
+            idle(getString(R.string.ol_usb_busy));
             return;
         }
         open(pfd, new FileInputStream(pfd.getFileDescriptor()), new FileOutputStream(pfd.getFileDescriptor()));
@@ -241,7 +256,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
             EventLog.add("Имитатор ГУ: подключились к " + target);
             open(socket, socket.getInputStream(), socket.getOutputStream());
         } catch (IOException e) {
-            idle("Имитатор ГУ " + target + " недоступен: " + e.getMessage());
+            idle(getString(R.string.ol_sim_unavailable, target, e.getMessage()));
         }
     }
 
@@ -257,7 +272,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         waitKeyFrame = false;
         connected = true;
         connectedAt = System.currentTimeMillis();
-        setState(State.HANDSHAKE, "Машина подключена, договариваемся о протоколе");
+        setState(State.HANDSHAKE, getString(R.string.ol_waiting_hu));
         timer = new Timer("ol-timer");
         new Thread(() -> readLoop(s), "ol-reader").start();
         new Thread(() -> writeLoop(o), "ol-writer").start();
@@ -294,7 +309,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         } catch (Exception e) {
             EventLog.error("выгрузка журнала", e);
         }
-        idle("Вставьте кабель в USB машины");
+        idle(getString(R.string.ol_plug_cable));
     }
 
     /**
@@ -421,7 +436,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         } catch (Exception e) {
             EventLog.error("запуск экрана машины", e);
             screen.stop();
-            setState(State.HANDSHAKE, "Не удалось запустить видео: " + e.getMessage());
+            setState(State.HANDSHAKE, getString(direct ? R.string.ol_video_failed_direct : R.string.ol_video_failed, e.getMessage()));
             return;
         }
         if (direct) {
@@ -434,17 +449,37 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
             CarProjection.show(this);
         }
         sendAap(AapService.ACTION_START_SELF_MODE);
-        setState(State.HANDSHAKE, "Экран машины готов, запускаем Android Auto");
-        if (!AaServer.isListening()) {
+        setState(State.HANDSHAKE, getString(R.string.ol_aa_starting));
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (AaServer.isListening()) {
+            nm.cancel(AA_SERVER_OFF_ID);
+        } else {
             // Обычно после перезагрузки телефона: AA не запускает свой сервер сам.
-            EventLog.add("Сервер Android Auto выключен — показываем подсказку на экране машины");
+            EventLog.add("Сервер Android Auto выключен — показываем подсказку на экране машины и телефона");
+            String howTo = getString(R.string.ol_how_to_start);
             if (direct) {
-                DirectProjection.notice(AaServer.HOW_TO_START);
+                DirectProjection.notice(howTo);
             } else {
-                CarProjection.notice(AaServer.HOW_TO_START);
+                CarProjection.notice(howTo);
             }
-            setState(State.HANDSHAKE, AaServer.HOW_TO_START.replace('\n', ' '));
+            setState(State.HANDSHAKE, howTo.replace('\n', ' '));
+            notifyAaServerOff(nm);
         }
+    }
+
+    /** Подсказка на телефоне: тап открывает настройки Android Auto, где включается сервер. */
+    private void notifyAaServerOff(NotificationManager nm) {
+        PendingIntent open = PendingIntent.getActivity(this, 2,
+                AaServer.settingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE);
+        String text = getString(R.string.ol_aa_server_off_text);
+        nm.notify(AA_SERVER_OFF_ID, new Notification.Builder(this, ALERT_CHANNEL)
+                .setContentTitle(getString(R.string.ol_aa_server_off))
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setSmallIcon(android.R.drawable.stat_sys_warning)
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build());
     }
 
     /** Команда play от ГУ: начинаем отдавать кадры, первым — ключевой с SPS/PPS. */
@@ -466,16 +501,15 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         waitKeyFrame = true;
         requestKeyFrame();
         EventLog.add("ГУ включило видео (" + (direct ? "прямой режим" : "перекодирование") + "): " + v.width + "x" + v.height + ", " + v.bitRate + " бит/с");
-        setState(State.RUNNING, v.width + " × " + v.height + " · "
-                + (direct ? "прямой режим" : "перекодирование " + String.format(Locale.US, "%.1f",
-                        (v.bitRate > 0 ? v.bitRate : DEFAULT_BITRATE) / 1e6) + " Мбит/с"));
+        setState(State.RUNNING, direct ? getString(R.string.ol_running_direct, v.width, v.height)
+                : getString(R.string.ol_running_transcode, v.width, v.height, (v.bitRate > 0 ? v.bitRate : DEFAULT_BITRATE) / 1e6));
     }
 
     /** ГУ остановило видео: перестаём слать кадры, Android Auto продолжает работать. */
     @Override
     public void stopVideo() {
         if (connected) {
-            setState(State.HANDSHAKE, "Машина приостановила видео");
+            setState(State.HANDSHAKE, getString(R.string.ol_video_paused));
         }
     }
 
@@ -529,13 +563,6 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
 
     @Override
     public void micData(byte[] b, int off, int len) {
-    }
-
-    @Override
-    public void status(String text) {
-        if (state != State.RUNNING) {
-            setState(State.HANDSHAKE, text);
-        }
     }
 
     @Override

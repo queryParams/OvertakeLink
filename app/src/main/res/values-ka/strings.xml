@@ -417,7 +417,6 @@
     <string name="reset_usb_option">USB კავშირის გადატვირთვა</string>
     <string name="reset_usb_timeout">USB მოწყობილობა ვერ მოიძებნა. შეამოწმეთ კავშირი.</string>
     <string name="notification_service_running">Open Headunit გაშვებულია</string>
-    <string name="notification_projection_active">Android Auto-ს პროეცირება აქტიურია</string>
     <string name="shortcut_connect_title">დაკავშირება</string>
     <string name="shortcut_connect_desc">ბოლო ტელეფონთან ავტომატური დაკავშირება</string>
     <string name="shortcut_selfmode_title">ავტონომიური რეჟიმი</string>

@@ -377,7 +377,6 @@
     <string name="reset_usb_option">USB接続をリセットする</string>
     <string name="reset_usb_timeout">USBデバイスが見つかりません。接続を確認してください。</string>
     <string name="notification_service_running">Open Headunitが起動中</string>
-    <string name="notification_projection_active">Android Autoを投影中</string>
     <string name="shortcut_connect_title">接続</string>
     <string name="shortcut_connect_desc">最後に接続したスマートフォンに自動接続</string>
     <string name="shortcut_selfmode_title">セルフモード</string>

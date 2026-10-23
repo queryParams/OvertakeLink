@@ -16,6 +16,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import com.andrerinas.openheadunit.aap.AapService
 import com.andrerinas.openheadunit.App
+import com.andrerinas.openheadunit.R
 import com.andrerinas.openheadunit.aap.ProjectionWatchdogPolicy
 import com.andrerinas.openheadunit.aap.protocol.messages.TouchEvent
 import com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent
@@ -74,7 +75,7 @@ class CarProjection private constructor(context: Context, display: Display) :
             gravity = Gravity.CENTER
         }
         root.addView(splash, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        showSplash("OvertakeLink\nЗапускаем Android Auto…")
+        showSplash(context.getString(R.string.ol_car_starting))
         nudgePixel = android.view.View(context).apply { setBackgroundColor(Color.BLACK) }
         root.addView(nudgePixel, FrameLayout.LayoutParams(1, 1))
         setContentView(root)
@@ -86,7 +87,7 @@ class CarProjection private constructor(context: Context, display: Display) :
                 if (state is CommManager.ConnectionState.Disconnected && wasProjecting) {
                     wasProjecting = false
                     closed = true
-                    showSplash("Android Auto закрыт\nКоснитесь экрана, чтобы открыть снова")
+                    showSplash(context.getString(R.string.ol_car_closed))
                 }
                 if (state is CommManager.ConnectionState.HandshakeComplete) {
                     HeadUnitScreenConfig.lockResolution()
@@ -164,7 +165,7 @@ class CarProjection private constructor(context: Context, display: Display) :
         if (closed) {
             if (action == MotionEvent.ACTION_UP) {
                 closed = false
-                showSplash("OvertakeLink\nЗапускаем Android Auto…")
+                showSplash(context.getString(R.string.ol_car_starting))
                 EventLog.add("Экран машины: касание — открываем Android Auto снова")
                 context.startService(Intent(context, AapService::class.java).setAction(AapService.ACTION_START_SELF_MODE))
             }

@@ -7,6 +7,8 @@ plugins {
     kotlin("android")
 }
 
+val OVERTAKELINK_LOCALES = listOf("ru", "en")
+
 android {
     compileSdk = 36
     namespace = "com.andrerinas.openheadunit"
@@ -37,7 +39,9 @@ android {
     }?.map { dir ->
         // Extract locale code from directory name (e.g., "values-es" -> "es", "values-pt-rBR" -> "pt-rBR")
         dir.name.removePrefix("values-")
-    }?.sorted() ?: emptyList()
+    }?.sorted()
+        // OvertakeLink: в APK только русский и английский (см. localeFilters ниже) — список языков тот же.
+        ?.filter { it in OVERTAKELINK_LOCALES } ?: emptyList()
 
     println("Detected available locales: $availableLocales")
 
@@ -91,8 +95,8 @@ android {
         minSdk = 31
         targetSdk = 36
         // OvertakeLink: код версии = мажор*10000 + минор*100 + патч, всегда выше кодов Open Headunit.
-        versionCode = 600
-        versionName = "0.6"
+        versionCode = 700
+        versionName = "0.7"
         setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
@@ -105,7 +109,19 @@ android {
         // OvertakeLink: канал к имитатору ГУ по TCP — в отладке всегда, в релизе только по -PolSim
         // (проверка сжатого релизного кода в эмуляторе); пользовательские релизы собираются без него.
         buildConfigField("boolean", "SIM_LINK", (project.hasProperty("olSim")).toString())
+        // OvertakeLink: собственного нативного кода нет, библиотеки — только под процессоры телефонов (ARM).
+        // x86_64 — для эмулятора: в отладочных сборках и в релизе, собранном для проверки (-PolSim).
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            val forEmulator = project.hasProperty("olSim") ||
+                gradle.startParameter.taskNames.none { it.contains("Release", ignoreCase = true) }
+            if (forEmulator) abiFilters += "x86_64"
+        }
+    }
 
+    // OvertakeLink: из 25 языков Open Headunit оставлены русский и английский — APK заметно меньше.
+    androidResources {
+        localeFilters += OVERTAKELINK_LOCALES
     }
 
     flavorDimensions.add("distribution")

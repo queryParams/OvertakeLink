@@ -27,6 +27,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.andrerinas.openheadunit.R;
 import com.andrerinas.openheadunit.main.SettingsActivity;
 import com.andrerinas.openheadunit.utils.ToastUtils;
 
@@ -85,7 +86,7 @@ public final class OvertakeLinkActivity extends Activity {
         head.addView(logo, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         // Экран машины — каким его сообщило ГУ при последнем подключении.
         String car = getSharedPreferences("overtakelink", MODE_PRIVATE).getString("carScreen", null);
-        head.addView(text(car == null ? "машина ещё не подключалась" : "экран машины " + car, 12, MUTED, false));
+        head.addView(text(car == null ? getString(R.string.ol_car_never) : getString(R.string.ol_car_screen, car), 12, MUTED, false));
         root.addView(head);
 
         ScrollView scroll = new ScrollView(this);
@@ -98,7 +99,8 @@ public final class OvertakeLinkActivity extends Activity {
         LinearLayout nav = row();
         nav.setBackgroundColor(0xFF12161B);
         nav.setPadding(dp(8), dp(8), dp(8), dp(12));
-        String[][] items = {{"status", "Статус"}, {"settings", "Настройки"}, {"log", "Журнал"}};
+        String[][] items = {{"status", getString(R.string.ol_tab_status)}, {"settings", getString(R.string.ol_tab_settings)},
+                {"log", getString(R.string.ol_tab_log)}};
         tabs = new TextView[items.length];
         for (int i = 0; i < items.length; i++) {
             String id = items[i][0];
@@ -159,20 +161,21 @@ public final class OvertakeLinkActivity extends Activity {
         String update = UpdateCheck.availableVersion(this);
         if (update != null) {
             LinearLayout u = card();
-            u.addView(text("Доступна версия " + update, 16, TEXT, true));
-            u.addView(text("Скачайте APK и установите поверх — настройки сохранятся.", 13, MUTED, false));
-            u.addView(button("Скачать", true, v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(UpdateCheck.downloadUrl(this))))));
+            u.addView(text(getString(R.string.ol_update_available, update), 16, TEXT, true));
+            u.addView(text(getString(R.string.ol_update_note), 13, MUTED, false));
+            Button get = button(getString(R.string.ol_update_install), true, null);
+            get.setOnClickListener(v -> UpdateInstaller.start(this,
+                    state -> get.setText(state == null ? getString(R.string.ol_update_install) : state)));
+            u.addView(get);
             content.addView(u, cardLp());
         }
         OvertakeLinkService.State st = OvertakeLinkService.state();
         LinearLayout card = card();
-        String title = st == OvertakeLinkService.State.RUNNING ? "Android Auto на экране машины"
-                : st == OvertakeLinkService.State.HANDSHAKE ? "Подключаемся к машине" : "Ждём машину";
-        card.addView(text(title, 19, TEXT, true));
-        card.addView(text(OvertakeLinkService.detail(), 13, MUTED, false));
+        card.addView(text(OvertakeLinkService.title(this), 19, TEXT, true));
+        card.addView(text(OvertakeLinkService.detail(this), 13, MUTED, false));
         int done = st == OvertakeLinkService.State.RUNNING ? 4 : st == OvertakeLinkService.State.HANDSHAKE ? 2 : 0;
         LinearLayout steps = row();
-        String[] labels = {"USB", "ГУ", "Android Auto", "Видео"};
+        String[] labels = {"USB", getString(R.string.ol_step_hu), "Android Auto", getString(R.string.ol_step_video)};
         for (int i = 0; i < labels.length; i++) {
             LinearLayout s = new LinearLayout(this);
             s.setOrientation(LinearLayout.VERTICAL);
@@ -189,10 +192,10 @@ public final class OvertakeLinkActivity extends Activity {
         }
         card.addView(steps);
         if (st != OvertakeLinkService.State.WAITING) {
-            card.addView(button("Остановить", false, v -> startService(new Intent(this, OvertakeLinkService.class)
+            card.addView(button(getString(R.string.ol_stop), false, v -> startService(new Intent(this, OvertakeLinkService.class)
                     .setAction(OvertakeLinkService.ACTION_STOP))));
         } else {
-            card.addView(button("Подключить вручную", true, v -> startForegroundService(new Intent(this, OvertakeLinkService.class)
+            card.addView(button(getString(R.string.ol_connect_manually), true, v -> startForegroundService(new Intent(this, OvertakeLinkService.class)
                     .setAction(OvertakeLinkService.ACTION_CONNECT_USB))));
         }
         content.addView(card, cardLp());
@@ -204,8 +207,8 @@ public final class OvertakeLinkActivity extends Activity {
             if (c.ok) okCount++;
         }
         LinearLayout h = row();
-        h.addView(text("Готовность", 16, TEXT, true), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        h.addView(text(okCount + " из " + checks.length + (okCount < checks.length ? " · настроить ›" : ""), 13,
+        h.addView(text(getString(R.string.ol_ready), 16, TEXT, true), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        h.addView(text(getString(R.string.ol_ready_count, okCount, checks.length) + (okCount < checks.length ? getString(R.string.ol_ready_fix) : ""), 13,
                 okCount < checks.length ? WARN : OK, false));
         ready.addView(h);
         for (Check c : checks) {
@@ -239,16 +242,18 @@ public final class OvertakeLinkActivity extends Activity {
             if (d.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) bt = true;
         }
         return new Check[]{
-                new Check("Разрешения", notif && mic, "выданы", "выдать"),
-                new Check("Батарея без ограничений", battery, "да", "настроить"),
-                new Check("Сервер Android Auto", aaServerUp, "работает", "включить"),
-                new Check("OvertakeLink открывается по кабелю", usbDefault, "да", "проверится в машине"),
-                new Check("Bluetooth-звук", bt, "подключён", "нет подключения")
+                new Check(getString(R.string.ol_check_permissions), notif && mic,
+                        getString(R.string.ol_check_permissions_ok), getString(R.string.ol_check_permissions_bad)),
+                new Check(getString(R.string.ol_check_battery), battery, getString(R.string.ol_yes), getString(R.string.ol_check_battery_bad)),
+                new Check(getString(R.string.ol_check_aa_server), aaServerUp,
+                        getString(R.string.ol_check_aa_server_ok), getString(R.string.ol_check_aa_server_bad)),
+                new Check(getString(R.string.ol_check_usb), usbDefault, getString(R.string.ol_yes), getString(R.string.ol_check_usb_bad)),
+                new Check(getString(R.string.ol_check_bt), bt, getString(R.string.ol_check_bt_ok), getString(R.string.ol_check_bt_bad))
         };
     }
 
     private String screenSignature() {
-        StringBuilder sb = new StringBuilder(OvertakeLinkService.state().name()).append('|').append(OvertakeLinkService.detail())
+        StringBuilder sb = new StringBuilder(OvertakeLinkService.state().name()).append('|').append(OvertakeLinkService.detail(this))
                 .append('|').append(UpdateCheck.availableVersion(this)).append('|');
         for (Check c : checks()) {
             sb.append(c.ok ? '1' : '0');
@@ -265,21 +270,21 @@ public final class OvertakeLinkActivity extends Activity {
     private void renderTerms() {
         boolean accepted = Terms.accepted(this);
         LinearLayout card = card();
-        card.addView(text(Terms.TITLE, 22, TEXT, true));
-        TextView body = text(Terms.TEXT, 14, 0xFFC3C9D1, false);
+        card.addView(text(getString(R.string.ol_terms_title), 22, TEXT, true));
+        TextView body = text(getString(R.string.ol_terms_text), 14, 0xFFC3C9D1, false);
         body.setPadding(0, dp(12), 0, dp(12));
         card.addView(body);
-        card.addView(text("Полный текст лицензии: github.com/" + UpdateCheck.REPO + "/blob/main/LICENSE", 12, MUTED, false));
+        card.addView(text(getString(R.string.ol_terms_license, "github.com/" + UpdateCheck.REPO + "/blob/main/LICENSE"), 12, MUTED, false));
         if (accepted) {
-            card.addView(button("Назад", false, v -> show("settings")));
+            card.addView(button(getString(R.string.ol_back), false, v -> show("settings")));
         } else {
-            card.addView(button("Принимаю", true, v -> {
+            card.addView(button(getString(R.string.ol_accept), true, v -> {
                 Terms.accept(this);
                 EventLog.add("Условия использования приняты (версия " + Terms.VERSION + ")");
                 boolean firstRun = !getSharedPreferences("overtakelink", MODE_PRIVATE).getBoolean("setupDone", false);
                 show(firstRun ? "setup" : "status");
             }));
-            card.addView(button("Не принимаю — закрыть", false, v -> finishAndRemoveTask()));
+            card.addView(button(getString(R.string.ol_decline), false, v -> finishAndRemoveTask()));
         }
         content.addView(card, cardLp());
     }
@@ -287,15 +292,15 @@ public final class OvertakeLinkActivity extends Activity {
     // ---------- Первая настройка ----------
 
     private void renderSetup() {
-        String[][] steps = {
-                {"Разрешения", "Уведомления — чтобы OvertakeLink работал в фоне со значком в шторке.\nМикрофон — для голосовых команд Android Auto.", "Выдать разрешения"},
-                {"Батарея и автозапуск", "HyperOS выгружает фоновые приложения.\nПоставьте «Без ограничений» и включите автозапуск, иначе связь с машиной будет обрываться.", "Открыть настройки батареи"},
-                {"Сервер Android Auto", "Android Auto → нажать 10 раз на номер версии → ⋮ → «Запустить сервер головного устройства».\nПосле перезагрузки телефона иногда нужно повторить — OvertakeLink напомнит.", "Открыть Android Auto"},
-                {"Кабель и выбор по умолчанию", "Подключите телефон кабелем к USB машины.\nAndroid спросит, чем открыть «QDriveLink» — выберите OvertakeLink и отметьте «Всегда».\nВ первый раз Android Auto попросит на телефоне принять условия и дать доступ к уведомлениям — сделайте это на стоянке.\nРодной QDLink лучше удалить.", "Понятно"},
-                {"Bluetooth: звук и руль", "Звук Android Auto идёт в машину по Bluetooth, как сейчас музыка. Проверьте, что телефон подключён к машине.\nГолосовая кнопка на руле открывает Ассистента на экране машины. При первом нажатии Android спросит, чем выполнить, — выберите OvertakeLink и «Всегда».", "Открыть Bluetooth"}
+        int[][] steps = {
+                {R.string.ol_setup_0_title, R.string.ol_setup_0_text, R.string.ol_setup_0_action},
+                {R.string.ol_setup_1_title, R.string.ol_setup_1_text, R.string.ol_setup_1_action},
+                {R.string.ol_setup_2_title, R.string.ol_setup_2_text, R.string.ol_setup_2_action},
+                {R.string.ol_setup_3_title, R.string.ol_setup_3_text, R.string.ol_setup_3_action},
+                {R.string.ol_setup_4_title, R.string.ol_setup_4_text, R.string.ol_setup_4_action}
         };
-        String[] s = steps[setupStep];
-        content.addView(text("Первая настройка · шаг " + (setupStep + 1) + " из " + steps.length, 12, MUTED, false));
+        int[] s = steps[setupStep];
+        content.addView(text(getString(R.string.ol_setup_progress, setupStep + 1, steps.length), 12, MUTED, false));
         LinearLayout bars = row();
         for (int i = 0; i < steps.length; i++) {
             View b = new View(this);
@@ -305,8 +310,8 @@ public final class OvertakeLinkActivity extends Activity {
             bars.addView(b, lp);
         }
         content.addView(bars);
-        content.addView(text(s[0], 24, TEXT, true));
-        TextView body = text(s[1], 15, 0xFFC3C9D1, false);
+        content.addView(text(getString(s[0]), 24, TEXT, true));
+        TextView body = text(getString(s[1]), 15, 0xFFC3C9D1, false);
         body.setPadding(0, dp(12), 0, dp(16));
         content.addView(body);
         // Шаг → проверка готовности: разрешения, батарея, сервер AA, (кабель — без проверки), Bluetooth.
@@ -314,12 +319,12 @@ public final class OvertakeLinkActivity extends Activity {
         if (checkOf[setupStep] >= 0) {
             content.addView(checkRow(checks()[checkOf[setupStep]]));
         }
-        content.addView(button(s[2], true, v -> setupAction()));
+        content.addView(button(getString(s[2]), true, v -> setupAction()));
         LinearLayout nav = row();
-        nav.addView(button("Назад", false, v -> {
+        nav.addView(button(getString(R.string.ol_back), false, v -> {
             if (setupStep > 0) { setupStep--; render(); } else show("status");
         }), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        nav.addView(button(setupStep == steps.length - 1 ? "Готово" : "Дальше", false, v -> {
+        nav.addView(button(getString(setupStep == steps.length - 1 ? R.string.ol_done : R.string.ol_next), false, v -> {
             if (setupStep < steps.length - 1) {
                 setupStep++;
                 render();
@@ -354,15 +359,13 @@ public final class OvertakeLinkActivity extends Activity {
                     startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
             }
         } catch (Exception e) {
-            ToastUtils.showToast(this, "Не открылось: " + e.getMessage(), Toast.LENGTH_LONG, true);
+            ToastUtils.showToast(this, getString(R.string.ol_open_failed, e.getMessage()), Toast.LENGTH_LONG, true);
         }
     }
 
     private void openAndroidAuto() {
-        Intent i = new Intent().setClassName("com.google.android.projection.gearhead",
-                "com.google.android.projection.gearhead.companion.settings.DefaultSettingsActivity");
         try {
-            startActivity(i);
+            startActivity(AaServer.settingsIntent());
         } catch (Exception e) {
             startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:com.google.android.projection.gearhead")));
@@ -373,35 +376,32 @@ public final class OvertakeLinkActivity extends Activity {
 
     private void renderSettings() {
         LinearLayout launch = card();
-        launch.addView(text("Запуск", 16, TEXT, true));
+        launch.addView(text(getString(R.string.ol_launch), 16, TEXT, true));
         launch.addView(text("OvertakeLink " + com.andrerinas.openheadunit.BuildConfig.VERSION_NAME + " · github.com/" + UpdateCheck.REPO, 12, MUTED, false));
-        launch.addView(text("Используйте на свой риск: приложение распространяется «как есть», без гарантий. "
-                + "Не отвлекайтесь от дороги — настраивайте всё на стоянке.", 12, MUTED, false));
-        launch.addView(text("OvertakeLink запускается сам, когда машина подключена кабелем и Android спросил, чем её открыть.", 13, MUTED, false));
-        launch.addView(button("Пройти первую настройку заново", false, v -> { setupStep = 0; show("setup"); }));
-        launch.addView(button("Условия использования", false, v -> show("terms")));
+        launch.addView(text(getString(R.string.ol_launch_risk), 12, MUTED, false));
+        launch.addView(text(getString(R.string.ol_launch_auto), 13, MUTED, false));
+        launch.addView(button(getString(R.string.ol_setup_again), false, v -> { setupStep = 0; show("setup"); }));
+        launch.addView(button(getString(R.string.ol_terms_title), false, v -> show("terms")));
         content.addView(launch, cardLp());
 
         LinearLayout aa = card();
         aa.addView(text("Android Auto", 16, TEXT, true));
-        aa.addView(text("Размер интерфейса, кодек, звук и прочее — в расширенных настройках встроенного приёмника Android Auto.", 13, MUTED, false));
-        aa.addView(button("Расширенные настройки Android Auto", false, v -> startActivity(new Intent(this, SettingsActivity.class))));
-        aa.addView(button("Открыть Android Auto", false, v -> openAndroidAuto()));
+        aa.addView(text(getString(R.string.ol_aa_note), 13, MUTED, false));
+        aa.addView(button(getString(R.string.ol_aa_advanced), false, v -> startActivity(new Intent(this, SettingsActivity.class))));
+        aa.addView(button(getString(R.string.ol_open_aa), false, v -> openAndroidAuto()));
         content.addView(aa, cardLp());
 
         LinearLayout video = card();
-        video.addView(text("Видео на экран машины", 16, TEXT, true));
+        video.addView(text(getString(R.string.ol_video_title), 16, TEXT, true));
         String mode = getSharedPreferences("overtakelink", MODE_PRIVATE).getString(OvertakeLinkService.PREF_VIDEO_MODE, OvertakeLinkService.VIDEO_DEFAULT);
         video.addView(text(OvertakeLinkService.VIDEO_TRANSCODE.equals(mode)
-                ? "Совместимый: телефон перепаковывает картинку под экран машины. Медленнее, но работает с любым ГУ."
-                : "Прямой: картинка Android Auto идёт в машину без перепаковки — меньше задержка, чётче, телефон меньше греется.", 13, MUTED, false));
-        video.addView(button("Прямой (быстрее)", OvertakeLinkService.VIDEO_DIRECT.equals(mode), v -> setVideoMode(OvertakeLinkService.VIDEO_DIRECT)));
-        video.addView(button("Прямой облегчённый (720p)", OvertakeLinkService.VIDEO_DIRECT_LIGHT.equals(mode),
+                ? getString(R.string.ol_video_transcode_note) : getString(R.string.ol_video_direct_note), 13, MUTED, false));
+        video.addView(button(getString(R.string.ol_video_direct), OvertakeLinkService.VIDEO_DIRECT.equals(mode), v -> setVideoMode(OvertakeLinkService.VIDEO_DIRECT)));
+        video.addView(button(getString(R.string.ol_video_direct_light), OvertakeLinkService.VIDEO_DIRECT_LIGHT.equals(mode),
                 v -> setVideoMode(OvertakeLinkService.VIDEO_DIRECT_LIGHT)));
-        video.addView(button("Совместимый (надёжнее)", OvertakeLinkService.VIDEO_TRANSCODE.equals(mode),
+        video.addView(button(getString(R.string.ol_video_transcode), OvertakeLinkService.VIDEO_TRANSCODE.equals(mode),
                 v -> setVideoMode(OvertakeLinkService.VIDEO_TRANSCODE)));
-        video.addView(text("Если в прямом режиме на экране машины чёрный экран — попробуйте облегчённый, не помогло — совместимый. "
-                + "Применяется при следующем подключении кабеля.", 12, MUTED, false));
+        video.addView(text(getString(R.string.ol_video_hint), 12, MUTED, false));
         content.addView(video, cardLp());
 
     }
@@ -416,21 +416,21 @@ public final class OvertakeLinkActivity extends Activity {
 
     private void renderLog() {
         LinearLayout card = card();
-        card.addView(text("Журнал", 16, TEXT, true));
+        card.addView(text(getString(R.string.ol_tab_log), 16, TEXT, true));
         logView = text(EventLog.tail(300), 11, 0xFFC3C9D1, false);
         logView.setTypeface(Typeface.MONOSPACE);
         logView.setTextIsSelectable(true);
         logVersion = EventLog.version();
         card.addView(logView);
         LinearLayout r = row();
-        r.addView(button("Сохранить лог", false, v -> {
+        r.addView(button(getString(R.string.ol_save_log), false, v -> {
             try {
-                ToastUtils.showToast(this, "Сохранено: " + EventLog.export(this), Toast.LENGTH_LONG, true);
+                ToastUtils.showToast(this, getString(R.string.ol_saved, EventLog.export(this)), Toast.LENGTH_LONG, true);
             } catch (Exception e) {
-                ToastUtils.showToast(this, "Не сохранилось: " + e.getMessage(), Toast.LENGTH_LONG, true);
+                ToastUtils.showToast(this, getString(R.string.ol_save_failed, e.getMessage()), Toast.LENGTH_LONG, true);
             }
         }), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        r.addView(button("Очистить", false, v -> { EventLog.wipeFile(); render(); }),
+        r.addView(button(getString(R.string.ol_clear), false, v -> { EventLog.wipeFile(); render(); }),
                 new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         card.addView(r);
         content.addView(card, cardLp());

@@ -372,7 +372,6 @@
     <string name="reset_usb_option">Resetează conexiunea USB</string>
     <string name="reset_usb_timeout">Dispozitivul USB nu a fost găsit. Verifică conexiunea.</string>
     <string name="notification_service_running">Open Headunit rulează</string>
-    <string name="notification_projection_active">Se proiectează Android Auto</string>
     <string name="shortcut_connect_title">Conectare</string>
     <string name="shortcut_connect_desc">Conectare automată la ultimul telefon</string>
     <string name="shortcut_disconnect_title">Deconectare</string>

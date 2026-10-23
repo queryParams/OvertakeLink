@@ -1,5 +1,6 @@
 package com.andrerinas.openheadunit.aap
 
+import io.github.queryparams.overtakelink.OvertakeLinkService
 import com.andrerinas.openheadunit.connection.wifi.scan.WifiScanControl
 import com.andrerinas.openheadunit.connection.SettingsRestartRecovery
 import android.Manifest
@@ -51,7 +52,6 @@ import com.andrerinas.openheadunit.connection.wifi.modes.nativeaa.zbt.ZbtDaemonR
 import com.andrerinas.openheadunit.utils.AppLog
 import com.andrerinas.openheadunit.utils.AppPermissions
 import com.andrerinas.openheadunit.utils.BluetoothAddressSeedPolicy
-import com.andrerinas.openheadunit.utils.CarLauncherManager
 import com.andrerinas.openheadunit.utils.BluetoothHelper
 import com.andrerinas.openheadunit.utils.DummyVpnPolicy
 import com.andrerinas.openheadunit.utils.ToastUtils
@@ -1081,7 +1081,7 @@ class AapService : Service() {
         }
 
         return try {
-            startForeground(1, createNotification(), mask)
+            startForeground(OvertakeLinkService.NOTIFICATION_ID, createNotification(), mask)
             AppLog.i("AapService: claimed the microphone foreground-service type for this capture")
             true
         } catch (e: Exception) {
@@ -1096,7 +1096,7 @@ class AapService : Service() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
 
         try {
-            startForeground(1, createNotification(),
+            startForeground(OvertakeLinkService.NOTIFICATION_ID, createNotification(),
                 ForegroundServiceTypePolicy.baseTypeMask(Build.VERSION.SDK_INT))
         } catch (e: Exception) {
             // Nothing to do about it and nothing depends on it: the service stays foreground with
@@ -1114,10 +1114,10 @@ class AapService : Service() {
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(1, createNotification(),
+                startForeground(OvertakeLinkService.NOTIFICATION_ID, createNotification(),
                     ForegroundServiceTypePolicy.baseTypeMask(Build.VERSION.SDK_INT))
             } else {
-                startForeground(1, createNotification())
+                startForeground(OvertakeLinkService.NOTIFICATION_ID, createNotification())
             }
         } catch (e: Exception) {
             AppLog.e("ForegroundServiceStartNotAllowedException/Exception caught in onCreate: ${e.message}", e)
@@ -3077,10 +3077,10 @@ class AapService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(1, createNotification(),
+                startForeground(OvertakeLinkService.NOTIFICATION_ID, createNotification(),
                     ForegroundServiceTypePolicy.baseTypeMask(Build.VERSION.SDK_INT))
             } else {
-                startForeground(1, createNotification())
+                startForeground(OvertakeLinkService.NOTIFICATION_ID, createNotification())
             }
         } catch (e: Exception) {
             AppLog.e("ForegroundServiceStartNotAllowedException/Exception caught in onStartCommand: ${e.message}", e)
@@ -3566,57 +3566,12 @@ class AapService : Service() {
     // Notification
     // -------------------------------------------------------------------------
 
-    private fun createNotification(): Notification {
-        val stopPendingIntent = PendingIntent.getService(
-            this, 0,
-            Intent(this, AapService::class.java).apply { action = ACTION_STOP_SERVICE },
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE
-            else PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        // Tap the notification to go back to the projection screen (if connected) or home
-        val (notificationIntent, requestCode) = if (commManager.isConnected) {
-            AapProjectionActivity.intent(this).apply {
-                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            } to 100
-        } else {
-            Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            } to 101
-        }
-
-        val contentText = if (commManager.isConnected)
-            getString(R.string.notification_projection_active)
-        else
-            getString(R.string.notification_service_running)
-
-        val showExit = CarLauncherManager.shouldShowExitButton(
-            isCarLauncherEnabled = settings.enableCarLauncher,
-            isDefaultLauncher = CarLauncherManager.isDefaultLauncher(this)
-        )
-
-        val builder = NotificationCompat.Builder(this, App.defaultChannel)
-            .setSmallIcon(R.drawable.ic_stat_aa)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .setContentTitle("Open Headunit")
-            .setContentText(contentText)
-            .setContentIntent(PendingIntent.getActivity(
-                this, requestCode, notificationIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or
-                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-            ))
-
-        if (showExit) {
-            builder.addAction(R.drawable.ic_exit_to_app_white_24dp, getString(R.string.exit), stopPendingIntent)
-        }
-
-        return builder.build()
-    }
+    // OvertakeLink: то же уведомление и под тем же номером, что у службы OvertakeLink, — в шторке одно, без «Open Headunit».
+    private fun createNotification(): Notification = OvertakeLinkService.notification(this)
 
     private fun updateNotification() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(1, createNotification())
+        notificationManager.notify(OvertakeLinkService.NOTIFICATION_ID, createNotification())
     }
 
     /**

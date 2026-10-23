@@ -792,7 +792,6 @@
     <string name="boot_loop_paused_title">หยุดการเริ่มต้นไร้สายชั่วคราว</string>
     <string name="boot_loop_paused_generic">อุปกรณ์นี้รีสตาร์ทสามครั้งติดต่อกันหลังจาก Open Headunit เริ่มการทำงานแบบไร้สาย ดังนั้นจึงปิดระบบไร้สายไว้ในครั้งนี้ USB ยังคงใช้งานได้ เปิดแอปเพื่อเปิดใช้งานอีกครั้ง</string>
     <string name="boot_loop_paused_native_wifi_direct">อุปกรณ์นี้รีสตาร์ทสามครั้งติดต่อกันหลังจาก Open Headunit เริ่มระบบไร้สาย จึงปิดระบบไร้สายไว้ในครั้งนี้ บนเฮดยูนิตบางรุ่น ชิป Wi-Fi จะทำให้ทั้งระบบล่มเมื่อโทรศัพท์เข้าร่วมเครือข่าย Wi-Fi Direct ลองเปลี่ยนโหมด Android Auto เป็นฮอตสปอตของเฮดยูนิต USB ยังคงใช้งานได้</string>
-    <string name="notification_projection_active">Android Auto กำลังฉายภาพ</string>
     <string name="shortcut_connect_title">เชื่อมต่อ</string>
     <string name="shortcut_connect_desc">เชื่อมต่ออัตโนมัติกับโทรศัพท์เครื่องล่าสุด</string>
     <string name="shortcut_selfmode_title">โหมดตนเอง</string>

@@ -350,7 +350,6 @@
     <string name="reset_usb_option">USB-verbinding resetten</string>
     <string name="reset_usb_timeout">USB-apparaat niet gevonden. Controleer de verbinding.</string>
     <string name="notification_service_running">Open Headunit is actief</string>
-    <string name="notification_projection_active">Android Auto wordt geprojecteerd</string>
     <string name="shortcut_connect_title">Verbinden</string>
     <string name="shortcut_connect_desc">Automatisch verbinden met de laatste telefoon</string>
     <string name="shortcut_disconnect_title">Verbinding verbreken</string>

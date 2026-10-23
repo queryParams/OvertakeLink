@@ -382,7 +382,6 @@
     <string name="reset_usb_option">Đặt lại kết nối USB</string>
     <string name="reset_usb_timeout">Không tìm thấy thiết bị USB. Hãy kiểm tra kết nối.</string>
     <string name="notification_service_running">Open Headunit đang chạy</string>
-    <string name="notification_projection_active">Đang chiếu Android Auto</string>
     <string name="shortcut_connect_title">Kết nối</string>
     <string name="shortcut_connect_desc">Tự kết nối với điện thoại gần nhất</string>
     <string name="shortcut_selfmode_title">Chế độ độc lập</string>

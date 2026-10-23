@@ -1,4 +1,6 @@
-> Это описание исходного проекта [Open Headunit](https://github.com/andreknieriem/headunit-revived), на котором основан OvertakeLink. Ссылки ниже ведут на Open Headunit, а не на OvertakeLink. Описание OvertakeLink — в [README.md](README.md).
+> Это описание исходного проекта [Open Headunit](https://github.com/andreknieriem/headunit-revived), на котором основан OvertakeLink. Ссылки ниже ведут на Open Headunit, а не на OvertakeLink. Описание OvertakeLink — в [README.ru.md](README.ru.md).
+>
+> This is the description of the original [Open Headunit](https://github.com/andreknieriem/headunit-revived) project that OvertakeLink is based on. Links below lead to Open Headunit, not OvertakeLink. OvertakeLink is described in [README.md](README.md).
 
 # Open Headunit
 

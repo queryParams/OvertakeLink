@@ -792,7 +792,6 @@
     <string name="boot_loop_paused_title">Arranque sem fios pausado</string>
     <string name="boot_loop_paused_generic">Este dispositivo reiniciou três vezes seguidas pouco depois de o Open Headunit iniciar o modo sem fios, pelo que o modo sem fios ficou desativado desta vez. O USB continua a funcionar. Abra a aplicação para o reativar.</string>
     <string name="boot_loop_paused_native_wifi_direct">Este dispositivo reiniciou três vezes seguidas pouco depois de o Open Headunit iniciar o modo sem fios, pelo que o modo sem fios ficou desativado desta vez. Em algumas unidades, o chip Wi-Fi bloqueia todo o sistema quando um telemóvel se liga a uma rede Wi-Fi Direct. Experimente mudar o modo do Android Auto para o hotspot da unidade. O USB continua a funcionar.</string>
-    <string name="notification_projection_active">O Android Auto está a ser projetado</string>
     <string name="shortcut_connect_title">Ligar</string>
     <string name="shortcut_connect_desc">Ligar automaticamente ao último telemóvel</string>
     <string name="shortcut_selfmode_title">Modo Próprio</string>

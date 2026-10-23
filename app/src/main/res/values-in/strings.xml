@@ -792,7 +792,6 @@
     <string name="boot_loop_paused_title">Pengaktifan nirkabel dijeda</string>
     <string name="boot_loop_paused_generic">Perangkat ini dimulai ulang tiga kali berturut-turut sesaat setelah Open Headunit mengaktifkan nirkabel, jadi nirkabel dinonaktifkan kali ini. USB tetap berfungsi. Buka aplikasi untuk mengaktifkannya kembali.</string>
     <string name="boot_loop_paused_native_wifi_direct">Perangkat ini dimulai ulang tiga kali berturut-turut sesaat setelah Open Headunit mengaktifkan nirkabel, jadi nirkabel dinonaktifkan kali ini. Pada beberapa head unit, chipset Wi-Fi membuat seluruh sistem mati saat ponsel bergabung ke jaringan Wi-Fi Direct. Coba alihkan mode Android Auto ke hotspot head unit. USB tetap berfungsi.</string>
-    <string name="notification_projection_active">Proyeksi Android Auto aktif</string>
     <string name="shortcut_connect_title">Hubungkan</string>
     <string name="shortcut_connect_desc">Hubungkan otomatis ke ponsel terakhir</string>
     <string name="shortcut_selfmode_title">Mode Mandiri</string>

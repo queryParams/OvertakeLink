@@ -368,7 +368,6 @@
     <string name="reset_usb_option">USB bağlantısını sıfırla</string>
     <string name="reset_usb_timeout">USB cihazı bulunamadı. Lütfen bağlantıyı kontrol edin.</string>
     <string name="notification_service_running">Open Headunit çalışıyor</string>
-    <string name="notification_projection_active">Android Auto yansıtılıyor</string>
     <string name="shortcut_connect_title">Bağlan</string>
     <string name="shortcut_connect_desc">Son telefona otomatik bağlan</string>
     <string name="shortcut_selfmode_title">Dahili mod</string>

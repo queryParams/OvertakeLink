@@ -792,7 +792,6 @@
     <string name="boot_loop_paused_title">वायरलेस स्टार्टअप रुका</string>
     <string name="boot_loop_paused_generic">Open Headunit के वायरलेस शुरू करने के कुछ ही देर बाद यह डिवाइस लगातार तीन बार रीस्टार्ट हुआ, इसलिए इस बार वायरलेस बंद रखा गया। USB अब भी काम करता है। इसे फिर से चालू करने के लिए ऐप खोलें।</string>
     <string name="boot_loop_paused_native_wifi_direct">Open Headunit के वायरलेस शुरू करने के कुछ ही देर बाद यह डिवाइस लगातार तीन बार रीस्टार्ट हुआ, इसलिए इस बार वायरलेस बंद रखा गया। कुछ हेड यूनिट में, फ़ोन के वाई-फ़ाई डायरेक्ट नेटवर्क से जुड़ने पर वाई-फ़ाई चिपसेट पूरे सिस्टम को बंद कर देता है। Android Auto मोड को हेड यूनिट हॉटस्पॉट पर स्विच करके देखें। USB अब भी काम करता है।</string>
-    <string name="notification_projection_active">Android Auto प्रोजेक्शन चालू है</string>
     <string name="shortcut_connect_title">कनेक्ट करें</string>
     <string name="shortcut_connect_desc">अंतिम फ़ोन से स्वतः कनेक्ट करें</string>
     <string name="shortcut_selfmode_title">सेल्फ़ मोड</string>

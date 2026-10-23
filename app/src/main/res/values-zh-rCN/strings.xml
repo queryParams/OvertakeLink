@@ -350,7 +350,6 @@
     <string name="reset_usb_option">重置 USB 连接</string>
     <string name="reset_usb_timeout">未找到 USB 设备，请检查连接。</string>
     <string name="notification_service_running">Open Headunit 正在运行</string>
-    <string name="notification_projection_active">Android Auto 投屏中</string>
     <string name="shortcut_connect_title">连接</string>
     <string name="shortcut_connect_desc">自动连接到上次使用的手机</string>
     <string name="shortcut_disconnect_title">断开连接</string>

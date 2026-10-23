@@ -7,13 +7,13 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.SystemClock
-import androidx.core.app.NotificationCompat
 import androidx.core.content.PermissionChecker
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.AppComponent
 import com.andrerinas.openheadunit.connection.CommManager
 import com.andrerinas.openheadunit.utils.AppLog
 import com.andrerinas.openheadunit.utils.Settings
+import io.github.queryparams.overtakelink.OvertakeLinkService
 import org.junit.Assert.*
 import org.junit.Test
 import org.mockito.Mockito
@@ -45,7 +45,8 @@ class MicrophoneForegroundClaimTest {
             resources.add(Mockito.mockStatic(PendingIntent::class.java))
             resources.add(Mockito.mockConstruction(Intent::class.java, Mockito.withSettings().defaultAnswer(Mockito.RETURNS_SELF)))
             val notification = mock<Notification>()
-            resources.add(Mockito.mockConstruction(NotificationCompat.Builder::class.java,
+            resources.add(Mockito.mockConstruction(Notification.Action.Builder::class.java))
+            resources.add(Mockito.mockConstruction(Notification.Builder::class.java,
                 Mockito.withSettings().defaultAnswer(Mockito.RETURNS_SELF)) { builder, _ ->
                 whenever(builder.build()).thenReturn(notification)
             })
@@ -75,7 +76,7 @@ class MicrophoneForegroundClaimTest {
                 whenever(settings.useHeadUnitMicrophone).thenReturn(true)
                 assertTrue(claim())
                 val mask = argumentCaptor<Int>()
-                verify(service).startForeground(eq(1), same(notification), mask.capture())
+                verify(service).startForeground(eq(OvertakeLinkService.NOTIFICATION_ID), same(notification), mask.capture())
                 assertTrue(mask.firstValue and ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE != 0)
             }
         } finally {

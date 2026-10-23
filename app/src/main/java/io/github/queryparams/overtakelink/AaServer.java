@@ -1,5 +1,7 @@
 package io.github.queryparams.overtakelink;
 
+import android.content.Intent;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -10,10 +12,13 @@ import java.net.ServerSocket;
  * подключение вешает сервер. Вместо этого пытаемся на миг занять его порт: занят — значит, AA слушает.
  */
 public final class AaServer {
-    public static final String HOW_TO_START = "Включите на телефоне сервер Android Auto\n"
-            + "(Android Auto → ⋮ → «Запустить сервер головного устройства»)\nи переподключите кабель";
-
     private AaServer() {
+    }
+
+    /** Настройки Android Auto, где в меню «⋮» включается сервер головного устройства. */
+    public static Intent settingsIntent() {
+        return new Intent().setClassName("com.google.android.projection.gearhead",
+                "com.google.android.projection.gearhead.companion.settings.DefaultSettingsActivity");
     }
 
     /** Блокирует на миллисекунды: вызывать не из главного потока. */

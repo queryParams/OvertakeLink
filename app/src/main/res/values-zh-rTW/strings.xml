@@ -350,7 +350,6 @@
     <string name="reset_usb_option">重設 USB 連線</string>
     <string name="reset_usb_timeout">找不到 USB 裝置，請檢查連線。</string>
     <string name="notification_service_running">Open Headunit 執行中</string>
-    <string name="notification_projection_active">正在投射 Android Auto</string>
     <string name="shortcut_connect_title">連線</string>
     <string name="shortcut_connect_desc">自動連線至上次使用的手機</string>
     <string name="shortcut_disconnect_title">中斷連線</string>

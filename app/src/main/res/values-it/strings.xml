@@ -376,7 +376,6 @@
     <string name="reset_usb_option">Reimposta connessione USB</string>
     <string name="reset_usb_timeout">Dispositivo USB non trovato. Controlla la connessione.</string>
     <string name="notification_service_running">Open Headunit è in esecuzione</string>
-    <string name="notification_projection_active">La proiezione di Android Auto è attiva</string>
     <string name="shortcut_connect_title">Connetti</string>
     <string name="shortcut_connect_desc">Connetti automaticamente all\'ultimo telefono</string>
     <string name="shortcut_selfmode_title">Modalità Self</string>

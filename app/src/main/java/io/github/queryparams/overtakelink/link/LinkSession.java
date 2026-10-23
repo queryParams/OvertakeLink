@@ -29,8 +29,6 @@ public final class LinkSession {
 
         void micData(byte[] b, int off, int len);
 
-        void status(String text);
-
         ScreenGeometry geometry(int carWidth, int carHeight);
 
         /** ГУ сообщило размер экрана: можно заранее поднять экран машины и Android Auto. */
@@ -66,6 +64,8 @@ public final class LinkSession {
     private int heartbeatsReceived;
     private boolean legalTimerStarted;
     private boolean videoRunning;
+    /** Запросы ключевого кадра от ГУ за показ видео (в журнал — 1-й, 2-й, 4-й…): частые — декодер ГУ не справляется. */
+    private int keyFrameRequests;
 
     public LinkSession(Host host) {
         this.host = host;
@@ -196,6 +196,16 @@ public final class LinkSession {
                     }
                     return;
                 }
+                if (cmd == OldPackets.CMD_KEY_FRAME && action == OldPackets.ACTION_REQUEST) {
+                    keyFrameRequests++;
+                    if (Integer.bitCount(keyFrameRequests) == 1) {
+                        EventLog.add("← ГУ: запрос ключевого кадра (!BIN cmd 17), " + keyFrameRequests + "-й за показ видео");
+                    }
+                    if (videoRunning) {
+                        host.requestKeyFrame();
+                    }
+                    return;
+                }
                 EventLog.add("← ГУ: !BIN управление, action " + action + ", cmd " + cmd + ", value " + value
                         + "\n    hex: " + EventLog.hex(b, off, Math.min(total, 224), 224));
                 if (action != OldPackets.ACTION_REQUEST) {
@@ -248,7 +258,6 @@ public final class LinkSession {
                 carWidth = w > 0 ? w : 800;
                 carHeight = h > 0 ? h : 480;
                 geometry = host.geometry(carWidth, carHeight);
-                host.status("ГУ (старый протокол): экран " + carWidth + "x" + carHeight);
                 EventLog.add("ГУ: тип «" + carType + "», «" + other + "», экран " + carWidth + "x" + carHeight
                         + ", поля @120/@124: " + OldPackets.i32(b, off + 120) + "/" + OldPackets.i32(b, off + 124));
                 host.send(OldPackets.reply(b, off, false, host.sdk(), geometry.phoneLong, geometry.phoneShort,
@@ -280,11 +289,6 @@ public final class LinkSession {
                     startVideo();
                 } else {
                     stopVideo();
-                }
-                break;
-            case OldPackets.CMD_KEY_FRAME:
-                if (videoRunning) {
-                    host.requestKeyFrame();
                 }
                 break;
             default:
@@ -451,6 +455,7 @@ public final class LinkSession {
             video.frameInterval = 4;
         }
         videoRunning = true;
+        keyFrameRequests = 0;
         host.startVideo(video);
     }
 

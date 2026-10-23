@@ -351,7 +351,6 @@
     <string name="reset_usb_option">Zresetuj połączenie USB</string>
     <string name="reset_usb_timeout">Nie znaleziono urządzenia USB. Sprawdź połączenie.</string>
     <string name="notification_service_running">Open Headunit działa</string>
-    <string name="notification_projection_active">Trwa projekcja Android Auto</string>
     <string name="shortcut_connect_title">Połącz</string>
     <string name="shortcut_connect_desc">Połącz automatycznie z ostatnim telefonem</string>
     <string name="shortcut_disconnect_title">Rozłącz</string>
