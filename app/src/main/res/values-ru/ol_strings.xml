@@ -13,6 +13,10 @@
     <string name="ol_update_allow">Разрешите установку и нажмите ещё раз</string>
     <string name="ol_update_progress">Загрузка… %1$d%%</string>
     <string name="ol_update_failed">Не скачалось — нажмите ещё раз</string>
+    <string name="ol_update_check">Проверить обновления</string>
+    <string name="ol_update_checking">Проверяем…</string>
+    <string name="ol_update_latest">У вас последняя версия (%1$s)</string>
+    <string name="ol_update_check_failed">Нет связи с GitHub — проверьте интернет и повторите</string>
 
     <string name="ol_state_running">Android Auto на экране машины</string>
     <string name="ol_state_handshake">Подключаемся к машине</string>

@@ -2,6 +2,8 @@ package io.github.queryparams.overtakelink;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.andrerinas.openheadunit.BuildConfig;
 
@@ -17,13 +19,13 @@ import io.github.queryparams.overtakelink.link.EventLog;
 
 /**
  * Новая версия OvertakeLink: самый свежий релиз на GitHub, включая бета-версии (их GitHub не считает
- * «последним» релизом), не чаще раза в час; неудачная проверка повторяется при следующем открытии. Найденное запоминается, экран «Статус» показывает
- * ссылку на загрузку.
+ * «последним» релизом): при открытии приложения не чаще раза в 10 минут (неудачная — повторяется при
+ * следующем открытии) и по кнопке в настройках. Найденное запоминается, экран «Статус» предлагает обновиться.
  */
 public final class UpdateCheck {
     public static final String REPO = "queryParams/OvertakeLink";
-    /** GitHub без входа даёт 60 запросов в час с одного адреса — раз в час с запасом. */
-    private static final long INTERVAL_MS = 60 * 60 * 1000L;
+    /** GitHub без входа даёт 60 запросов в час с одного адреса — раз в 10 минут с запасом. */
+    private static final long INTERVAL_MS = 10 * 60 * 1000L;
     private static final String PREFS = "overtakelink";
 
     private static volatile boolean checking;
@@ -51,25 +53,44 @@ public final class UpdateCheck {
         return prefs(context).getString("updateApkSha256", null);
     }
 
+    public interface Result {
+        /** В главном потоке; ok — GitHub ответил (новая версия — в {@link #availableVersion}). */
+        void done(boolean ok);
+    }
+
     /** В фоне; результат появится на экране при следующей перерисовке. */
     public static void maybeCheck(Context context) {
-        SharedPreferences p = prefs(context);
-        long now = System.currentTimeMillis();
-        if (checking || now - p.getLong("updateCheckedAt", 0) < INTERVAL_MS) {
+        if (System.currentTimeMillis() - prefs(context).getLong("updateCheckedAt", 0) >= INTERVAL_MS) {
+            start(context, null);
+        }
+    }
+
+    /** Проверка по кнопке — сразу, без интервала. */
+    public static void checkNow(Context context, Result result) {
+        start(context, result);
+    }
+
+    private static void start(Context context, Result result) {
+        if (checking) {
             return;
         }
         checking = true;
         Context app = context.getApplicationContext();
+        Handler main = new Handler(Looper.getMainLooper());
         new Thread(() -> {
+            boolean ok;
             try {
-                check(app);
+                ok = check(app);
             } finally {
                 checking = false;
+            }
+            if (result != null) {
+                main.post(() -> result.done(ok));
             }
         }, "ol-update").start();
     }
 
-    private static void check(Context context) {
+    private static boolean check(Context context) {
         HttpURLConnection c = null;
         try {
             c = (HttpURLConnection) new URL("https://api.github.com/repos/" + REPO + "/releases?per_page=10").openConnection();
@@ -79,13 +100,13 @@ public final class UpdateCheck {
             c.setRequestProperty("User-Agent", "OvertakeLink/" + BuildConfig.VERSION_NAME);
             if (c.getResponseCode() != 200) {
                 EventLog.add("Обновление: GitHub ответил HTTP " + c.getResponseCode());
-                return;
+                return false;
             }
             JSONObject release = newest(new JSONArray(read(c.getInputStream())));
             // Время — только после ответа GitHub: неудачная проверка (нет сети) повторится при следующем открытии.
             prefs(context).edit().putLong("updateCheckedAt", System.currentTimeMillis()).apply();
             if (release == null) {
-                return;
+                return true;
             }
             String version = release.getString("tag_name").replaceFirst("^v", "");
             String apk = null;
@@ -109,8 +130,10 @@ public final class UpdateCheck {
             if (newer(version, BuildConfig.VERSION_NAME)) {
                 EventLog.add("Обновление: доступна версия " + version);
             }
+            return true;
         } catch (Exception e) {
             EventLog.add("Обновление: проверить не удалось (" + e.getMessage() + ")");
+            return false;
         } finally {
             if (c != null) {
                 c.disconnect();

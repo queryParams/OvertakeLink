@@ -380,6 +380,21 @@ public final class OvertakeLinkActivity extends Activity {
         launch.addView(text("OvertakeLink " + com.andrerinas.openheadunit.BuildConfig.VERSION_NAME + " · github.com/" + UpdateCheck.REPO, 12, MUTED, false));
         launch.addView(text(getString(R.string.ol_launch_risk), 12, MUTED, false));
         launch.addView(text(getString(R.string.ol_launch_auto), 13, MUTED, false));
+        Button check = button(getString(R.string.ol_update_check), false, null);
+        check.setOnClickListener(v -> {
+            check.setText(R.string.ol_update_checking);
+            UpdateCheck.checkNow(this, ok -> {
+                check.setText(R.string.ol_update_check);
+                String update = UpdateCheck.availableVersion(this);
+                if (update != null) {
+                    show("status");
+                } else {
+                    ToastUtils.showToast(this, ok ? getString(R.string.ol_update_latest, com.andrerinas.openheadunit.BuildConfig.VERSION_NAME)
+                            : getString(R.string.ol_update_check_failed), Toast.LENGTH_LONG, true);
+                }
+            });
+        });
+        launch.addView(check);
         launch.addView(button(getString(R.string.ol_setup_again), false, v -> { setupStep = 0; show("setup"); }));
         launch.addView(button(getString(R.string.ol_terms_title), false, v -> show("terms")));
         content.addView(launch, cardLp());

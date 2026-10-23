@@ -13,6 +13,10 @@
     <string name="ol_update_allow">Allow installing and tap again</string>
     <string name="ol_update_progress">Downloading… %1$d%%</string>
     <string name="ol_update_failed">Download failed — tap again</string>
+    <string name="ol_update_check">Check for updates</string>
+    <string name="ol_update_checking">Checking…</string>
+    <string name="ol_update_latest">You have the latest version (%1$s)</string>
+    <string name="ol_update_check_failed">Couldn’t reach GitHub — check the internet and try again</string>
 
     <string name="ol_state_running">Android Auto on the car screen</string>
     <string name="ol_state_handshake">Connecting to the car</string>
