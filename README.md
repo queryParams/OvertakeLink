@@ -24,7 +24,7 @@ maps, music, calls, the Assistant — with touch control.
 
 ## Installation
 
-1. **Download** the latest version from [Releases](../../releases): the `OvertakeLink-x.y.apk` file
+1. **Download** the latest version from [Releases](../../releases): the `OvertakeLink-x.y.z.apk` file
    (while the project is in beta, versions are marked as pre-release — that’s expected).
    Open it on the phone. Android will ask to allow installs from this source — allow it and tap
    “Install”.

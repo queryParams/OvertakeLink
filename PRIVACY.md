@@ -29,7 +29,7 @@ OvertakeLink ведёт журнал на телефоне (`Загрузки/Ov
 ## Сеть
 
 - Android Auto и OvertakeLink общаются внутри телефона (localhost).
-- Для проверки обновлений OvertakeLink раз в 12 часов обращается к GitHub (`api.github.com`). При этом
+- Для проверки обновлений OvertakeLink при открытии, не чаще раза в час, обращается к GitHub (`api.github.com`). При этом
   GitHub, как любой сайт, видит IP-адрес телефона; других данных не передаётся.
 - По кнопке «Скачать и установить» файл новой версии скачивается с GitHub.
 - Данные, которые обрабатывает сам Android Auto, регулируются политикой Google.
@@ -68,7 +68,7 @@ address**. The log is never sent by itself — only if you attach it to a report
 ### Network
 
 - Android Auto and OvertakeLink talk inside the phone (localhost).
-- To check for updates, OvertakeLink contacts GitHub (`api.github.com`) once every 12 hours. Like any
+- To check for updates, OvertakeLink contacts GitHub (`api.github.com`) when opened, at most once an hour. Like any
   website, GitHub sees the phone’s IP address; no other data is sent.
 - With the “Download and install” button, the new version’s file is downloaded from GitHub.
 - Data processed by Android Auto itself is governed by Google’s policy.

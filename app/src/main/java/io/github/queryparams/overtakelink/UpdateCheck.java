@@ -17,13 +17,16 @@ import io.github.queryparams.overtakelink.link.EventLog;
 
 /**
  * Новая версия OvertakeLink: самый свежий релиз на GitHub, включая бета-версии (их GitHub не считает
- * «последним» релизом), не чаще раза в 12 часов. Найденное запоминается, экран «Статус» показывает
+ * «последним» релизом), не чаще раза в час; неудачная проверка повторяется при следующем открытии. Найденное запоминается, экран «Статус» показывает
  * ссылку на загрузку.
  */
 public final class UpdateCheck {
     public static final String REPO = "queryParams/OvertakeLink";
-    private static final long INTERVAL_MS = 12 * 60 * 60 * 1000L;
+    /** GitHub без входа даёт 60 запросов в час с одного адреса — раз в час с запасом. */
+    private static final long INTERVAL_MS = 60 * 60 * 1000L;
     private static final String PREFS = "overtakelink";
+
+    private static volatile boolean checking;
 
     private UpdateCheck() {
     }
@@ -52,12 +55,18 @@ public final class UpdateCheck {
     public static void maybeCheck(Context context) {
         SharedPreferences p = prefs(context);
         long now = System.currentTimeMillis();
-        if (now - p.getLong("updateCheckedAt", 0) < INTERVAL_MS) {
+        if (checking || now - p.getLong("updateCheckedAt", 0) < INTERVAL_MS) {
             return;
         }
-        p.edit().putLong("updateCheckedAt", now).apply();
+        checking = true;
         Context app = context.getApplicationContext();
-        new Thread(() -> check(app), "ol-update").start();
+        new Thread(() -> {
+            try {
+                check(app);
+            } finally {
+                checking = false;
+            }
+        }, "ol-update").start();
     }
 
     private static void check(Context context) {
@@ -69,9 +78,12 @@ public final class UpdateCheck {
             c.setRequestProperty("Accept", "application/vnd.github+json");
             c.setRequestProperty("User-Agent", "OvertakeLink/" + BuildConfig.VERSION_NAME);
             if (c.getResponseCode() != 200) {
+                EventLog.add("Обновление: GitHub ответил HTTP " + c.getResponseCode());
                 return;
             }
             JSONObject release = newest(new JSONArray(read(c.getInputStream())));
+            // Время — только после ответа GitHub: неудачная проверка (нет сети) повторится при следующем открытии.
+            prefs(context).edit().putLong("updateCheckedAt", System.currentTimeMillis()).apply();
             if (release == null) {
                 return;
             }
