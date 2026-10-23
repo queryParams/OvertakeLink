@@ -10,7 +10,7 @@ maps, music, calls, the Assistant — with touch control.
 
 - nothing is installed on the head unit, the car is not modified;
 - works while the phone is locked and in your pocket;
-- the Assistant — with the microphone icon on the car screen;
+- the Assistant — with “Hey Google” or the microphone icon on the car screen;
 - sound goes to the car over Bluetooth, as usual.
 
 > OvertakeLink is an independent hobby project, not affiliated with Neusoft (the QDLink developer),
@@ -46,8 +46,8 @@ After that everything works by itself: get in, plug in the cable — Android Aut
 
 **Steering wheel buttons.** The car sends “next / previous” to whichever audio source is selected
 on the head unit: they switch tracks only while the head unit’s stock Bluetooth player is open. The
-steering wheel voice button is not supported yet — call the Assistant with the microphone icon on
-the car screen.
+steering wheel voice button is not supported yet — call the Assistant with “Hey Google” or the
+microphone icon on the car screen.
 
 **Updates:** OvertakeLink checks for new versions by itself and shows a “Download and install”
 button on the main screen: the app downloads the new version and opens the installer. The first

@@ -61,7 +61,7 @@
     <string name="ol_setup_3_text">Connect the phone to the car’s USB port with a cable.\nAndroid will ask which app should open “QDriveLink” — choose OvertakeLink and tick “Always”.\nThe first time, Android Auto will ask you on the phone to accept its terms and allow notification access — do it while parked.\nIt’s best to uninstall the stock QDLink app.</string>
     <string name="ol_setup_3_action">Got it</string>
     <string name="ol_setup_4_title">Bluetooth: audio and steering wheel buttons</string>
-    <string name="ol_setup_4_text">Android Auto sound goes to the car over Bluetooth, just like your music does now. Make sure the phone is connected to the car.\nSteering wheel “next / previous” switch tracks while the head unit’s Bluetooth player is open. The voice button on the steering wheel is not supported yet — call the Assistant with the microphone icon on the car screen.</string>
+    <string name="ol_setup_4_text">Android Auto sound goes to the car over Bluetooth, just like your music does now. Make sure the phone is connected to the car.\nSteering wheel “next / previous” switch tracks while the head unit’s Bluetooth player is open. The voice button on the steering wheel is not supported yet — call the Assistant with “Hey Google” or the microphone icon on the car screen.</string>
     <string name="ol_setup_4_action">Open Bluetooth</string>
     <string name="ol_done">Done</string>
     <string name="ol_next">Next</string>
