@@ -96,6 +96,12 @@ public final class LinkSession {
     }
 
     /** Упаковка кадра H.264 в видеопакет. */
+    /** Микрофон ГУ: при включении ГУ шлёт его звук пакетами dataType 12 (приходят в {@link Host#micData}). */
+    public void speech(boolean on) {
+        EventLog.add("→ ГУ: микрофон машины " + (on ? "включить" : "выключить") + " (!BIN cmd 21, value " + (on ? 1 : 0) + ")");
+        host.send(OldPackets.speechControl(on));
+    }
+
     /** Размер кадра для заголовков видеопакетов, если поток не того размера, что экран машины. */
     public synchronized void setFrameSize(int width, int height) {
         video.frameWidth = width;

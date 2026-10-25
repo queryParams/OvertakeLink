@@ -455,6 +455,17 @@ public final class OvertakeLinkActivity extends Activity {
         video.addView(text(getString(R.string.ol_video_hint), 12, MUTED, false));
         content.addView(video, cardLp());
 
+        LinearLayout lab = card();
+        lab.addView(text(getString(R.string.ol_experiments), 16, TEXT, true));
+        lab.addView(text(getString(R.string.ol_car_mic_note), 13, MUTED, false));
+        boolean carMic = getSharedPreferences("overtakelink", MODE_PRIVATE).getBoolean(OvertakeLinkService.PREF_CAR_MIC, false);
+        lab.addView(button(getString(carMic ? R.string.ol_car_mic_on : R.string.ol_car_mic_off), carMic, v -> {
+            getSharedPreferences("overtakelink", MODE_PRIVATE).edit().putBoolean(OvertakeLinkService.PREF_CAR_MIC, !carMic).apply();
+            EventLog.add("Микрофон машины (тест): " + (carMic ? "выключен" : "включён"));
+            render();
+        }));
+        content.addView(lab, cardLp());
+
     }
 
     private void setVideoMode(String mode) {

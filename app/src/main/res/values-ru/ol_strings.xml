@@ -111,4 +111,8 @@
     <string name="ol_video_paused">Машина приостановила видео</string>
     <string name="ol_car_starting">OvertakeLink\nЗапускаем Android Auto…</string>
     <string name="ol_car_closed">Android Auto закрыт\nКоснитесь экрана, чтобы открыть снова</string>
+    <string name="ol_experiments">Эксперименты</string>
+    <string name="ol_car_mic_note">Микрофон машины для Ассистента вместо микрофона телефона. Поддерживает ли его ваше ГУ — неизвестно: если машина не пришлёт звук, через 1,5 с включится микрофон телефона. Применяется при следующем подключении кабеля.</string>
+    <string name="ol_car_mic_on">Микрофон машины: включён</string>
+    <string name="ol_car_mic_off">Микрофон машины: выключен</string>
 </resources>

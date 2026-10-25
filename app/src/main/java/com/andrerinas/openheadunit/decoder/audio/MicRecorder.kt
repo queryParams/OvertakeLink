@@ -87,6 +87,8 @@ class MicRecorder(
         var peak = 0
     }
     @Volatile private var activeCapture: CaptureRun? = null
+    // OvertakeLink: источник звука вместо AudioRecord телефона (микрофон машины), пока идёт запись.
+    @Volatile private var activeExternal: ExternalMic? = null
     var listener: Listener? = null
     private var claimedForeground: ForegroundMicrophoneClaim? = null
 
@@ -94,7 +96,24 @@ class MicRecorder(
     private var bluetoothScoStarted = false
     private var scoReceiver: BroadcastReceiver? = null
 
+    /**
+     * OvertakeLink: внешний источник звука микрофона — микрофон машины по QDLink. Формат тот же,
+     * что у записи телефона: 16 кГц, моно, 16 бит.
+     */
+    interface ExternalMic {
+        fun interface Sink {
+            fun data(buf: ByteArray, len: Int)
+        }
+
+        /** Начать запись: звук — в [sink]; [fallback] — источник молчит, нужен микрофон телефона. */
+        fun start(sink: Sink, fallback: Runnable)
+        fun stop()
+    }
+
     companion object {
+        /** OvertakeLink: задан — запись идёт из него, а не с микрофона телефона. */
+        @Volatile @JvmStatic var externalMic: ExternalMic? = null
+
         // One hardware lifecycle FIFO also spans transport replacement: old cleanup precedes reopen.
         private val lifecycle = java.util.concurrent.Executors.newSingleThreadExecutor { job ->
             Thread(job, "mic_lifecycle").apply { isDaemon = true }
@@ -165,6 +184,7 @@ class MicRecorder(
 
     /** Called only by the microphone lifecycle worker; poll-side DATA retirement happens first. */
     fun stop() {
+        activeExternal?.let { activeExternal = null; it.stop() }
         val run = activeCapture
         activeCapture = null
         run?.thread?.interrupt()
@@ -287,7 +307,26 @@ class MicRecorder(
             AppLog.w("MicRecorder: Cannot start, mic not available on this device")
             return ERROR_UNAVAILABLE
         }
+        val external = externalMic
+        if (external != null) {
+            val target = listener
+            activeExternal = external
+            external.start({ buf, len -> target?.onMicDataAvailable(buf, len, peakAmplitude(buf, len)) }, {
+                postLifecycle {
+                    if (activeExternal === external) {
+                        activeExternal = null
+                        external.stop()
+                        val result = startPhoneMic()
+                        if (result != 0) target?.onMicCaptureFailed(result)
+                    }
+                }
+            })
+            return 0
+        }
+        return startPhoneMic()
+    }
 
+    private fun startPhoneMic(): Int {
         // Which of the two failed matters: a denied permission is fixable in this app's settings,
         // a revoked app-op is not and lives in the ROM's own privacy screen. One reporter chased a
         // granted permission for weeks because this line named only the first.

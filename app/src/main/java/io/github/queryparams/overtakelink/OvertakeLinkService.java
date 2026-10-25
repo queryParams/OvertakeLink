@@ -22,6 +22,7 @@ import com.andrerinas.openheadunit.BuildConfig;
 import com.andrerinas.openheadunit.R;
 import com.andrerinas.openheadunit.aap.AapService;
 import com.andrerinas.openheadunit.connection.CommManager;
+import com.andrerinas.openheadunit.decoder.audio.MicRecorder;
 
 import java.io.Closeable;
 import java.io.FileInputStream;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -68,6 +70,10 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     /** Больше кадров в очереди к ГУ — уже заметное отставание: пропускаем всё до свежего ключевого кадра. */
     private static final int VIDEO_QUEUE_LIMIT = 3;
     public static final String PREF_VIDEO_MODE = "videoMode";
+    /** Тестовая опция: микрофон машины для Ассистента вместо микрофона телефона. */
+    public static final String PREF_CAR_MIC = "carMic";
+    /** Сколько ждать звук от микрофона машины, прежде чем писать с телефона. */
+    private static final long CAR_MIC_WAIT_MS = 1500;
     public static final String VIDEO_DIRECT = "direct";
     public static final String VIDEO_DIRECT_LIGHT = "direct720";
     public static final String VIDEO_DIRECT_SMALL = "direct480";
@@ -102,6 +108,50 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     private volatile boolean direct;
     /** Кадр AA в прямом режиме — для строки состояния. */
     private volatile DirectProjection.Size directSize;
+    private volatile MicRecorder.ExternalMic.Sink carMicSink;
+    private volatile boolean carMicHeard;
+    /** ГУ уже промолчало в этом подключении: дальше сразу микрофон телефона, без потери начала фразы. */
+    private volatile boolean carMicSilent;
+
+    /**
+     * Микрофон машины: ГУ по команде cmd 21 шлёт звук своего микрофона (16 кГц, моно, 16 бит — как в
+     * параметрах речи). Родной QDLink этой командой не пользуется, поддержка на ГУ не проверена: если
+     * звука нет {@link #CAR_MIC_WAIT_MS}, запись идёт с микрофона телефона.
+     */
+    private final MicRecorder.ExternalMic carMic = new MicRecorder.ExternalMic() {
+        @Override
+        public void start(Sink sink, Runnable fallback) {
+            LinkSession s = session;
+            Timer t = timer;
+            if (s == null || t == null || carMicSilent) {
+                fallback.run();
+                return;
+            }
+            carMicHeard = false;
+            carMicSink = sink;
+            s.speech(true);
+            t.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    if (carMicSink == sink && !carMicHeard) {
+                        carMicSilent = true;
+                        EventLog.add("Микрофон машины молчит " + CAR_MIC_WAIT_MS + " мс — до конца подключения пишем с микрофона телефона");
+                        fallback.run();
+                    }
+                }
+            }, CAR_MIC_WAIT_MS);
+        }
+
+        @Override
+        public void stop() {
+            boolean on = carMicSink != null;
+            carMicSink = null;
+            LinkSession s = session;
+            if (on && s != null) {
+                s.speech(false);
+            }
+        }
+    };
 
     public static State state() {
         return state;
@@ -280,6 +330,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         waitKeyFrame = false;
         connected = true;
         connectedAt = System.currentTimeMillis();
+        carMicSilent = false;
+        MicRecorder.setExternalMic(getSharedPreferences("overtakelink", MODE_PRIVATE).getBoolean(PREF_CAR_MIC, false) ? carMic : null);
         setState(State.HANDSHAKE, getString(R.string.ol_waiting_hu));
         timer = new Timer("ol-timer");
         new Thread(() -> readLoop(s), "ol-reader").start();
@@ -298,6 +350,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
                 return;
             }
             connected = false;
+            MicRecorder.setExternalMic(null);
             EventLog.add("USB: соединение закрыто — " + reason);
             if (timer != null) {
                 timer.cancel();
@@ -606,6 +659,15 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
 
     @Override
     public void micData(byte[] b, int off, int len) {
+        MicRecorder.ExternalMic.Sink sink = carMicSink;
+        if (sink == null) {
+            return;
+        }
+        if (!carMicHeard) {
+            carMicHeard = true;
+            EventLog.add("Микрофон машины: звук пошёл, " + len + " байт в пакете");
+        }
+        sink.data(Arrays.copyOfRange(b, off, off + len), len);
     }
 
     @Override

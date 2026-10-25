@@ -28,6 +28,8 @@ public final class OldPackets {
     public static final int CMD_UPGRADE = 13;
     public static final int CMD_MIRROR_SUPPORT = 16;
     public static final int CMD_KEY_FRAME = 17;
+    /** Голос (класс n): value 1 — ГУ начинает слать звук своего микрофона (dataType 12), 0 — перестаёт. */
+    public static final int CMD_SPEECH = 21;
     public static final int CMD_HOME = 20;
     public static final int SCREEN_ACTION_ARGS = 18;
 
@@ -70,6 +72,13 @@ public final class OldPackets {
     public static byte[] speechArgs() {
         ByteBuffer b = fresh(DT_SPEECH, BLOCK, 16, 16, 0);
         b.putInt(64, 1).putInt(68, 16000).putInt(72, 1).putInt(76, 16);
+        return b.array();
+    }
+
+    /** Включить или выключить микрофон ГУ (класс n: action 2, @64 = 1, cmd 21). */
+    public static byte[] speechControl(boolean on) {
+        ByteBuffer b = fresh(DT_CONTROL, BLOCK, 128, 128, 2);
+        b.putInt(64, 1).putInt(68, CMD_SPEECH).putInt(72, on ? 1 : 0);
         return b.array();
     }
 
