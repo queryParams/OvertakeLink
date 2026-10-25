@@ -46,6 +46,7 @@
 
     <string name="ol_terms_title">Terms of use</string>
     <string name="ol_terms_text">1. OvertakeLink is free, open-source software (GNU AGPL-3.0 license). You may use, study, modify and distribute it under the terms of that license.\n\n2. The software is provided “as is”, without any warranty. You use it at your own risk. The authors are not liable for any damage — to your phone, head unit, car or data — or for consequences on the road.\n\n3. Safety. Keep your eyes on the road. Set up OvertakeLink and Android Auto only while parked. Obey traffic rules.\n\n4. OvertakeLink is an independent project and is not affiliated with Geely, Neusoft (QDLink) or Google. Names of these companies and their products are trademarks of their owners.\n\n5. OvertakeLink uses the Android Auto developer mode. Google may change it at any time, and OvertakeLink may then stop working.\n\n6. Data. OvertakeLink does not collect or send your data anywhere. The log is stored on your phone, and you share it yourself. The app contacts GitHub to check for and download updates.</string>
+    <string name="ol_terms_short">Terms</string>
     <string name="ol_terms_license">Full license text: %1$s</string>
     <string name="ol_back">Back</string>
     <string name="ol_accept">I accept</string>
@@ -103,9 +104,9 @@
     <string name="ol_video_failed_direct">Couldn’t start video: %1$s. Choose the “Compatible” video mode</string>
     <string name="ol_aa_starting">Car screen ready, starting Android Auto</string>
     <string name="ol_aa_server_off">Android Auto server is off</string>
-    <string name="ol_aa_server_off_text">Tap → ⋮ → “Start head unit server”, then reconnect the cable</string>
-    <string name="ol_how_to_start">Turn on the Android Auto server on the phone\n(Android Auto → ⋮ → “Start head unit server”)\nand reconnect the cable</string>
-    <string name="ol_running_direct">%1$d × %2$d · direct mode</string>
+    <string name="ol_aa_server_off_text">Tap → ⋮ → “Start head unit server” — Android Auto will connect by itself</string>
+    <string name="ol_how_to_start">Turn on the Android Auto server on the phone\n(Android Auto → ⋮ → “Start head unit server”)\nAndroid Auto will connect by itself</string>
+    <string name="ol_running_direct">Direct mode %1$dp: the Android Auto stream goes to the head unit without re-encoding</string>
     <string name="ol_running_transcode">%1$d × %2$d · re-encoding %3$.1f Mbit/s</string>
     <string name="ol_video_paused">The car paused the video</string>
     <string name="ol_car_starting">OvertakeLink\nStarting Android Auto…</string>

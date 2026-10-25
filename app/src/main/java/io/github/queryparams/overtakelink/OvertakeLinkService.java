@@ -17,9 +17,11 @@ import android.os.ParcelFileDescriptor;
 import android.os.PowerManager;
 import android.provider.Settings;
 
+import com.andrerinas.openheadunit.App;
 import com.andrerinas.openheadunit.BuildConfig;
 import com.andrerinas.openheadunit.R;
 import com.andrerinas.openheadunit.aap.AapService;
+import com.andrerinas.openheadunit.connection.CommManager;
 
 import java.io.Closeable;
 import java.io.FileInputStream;
@@ -98,6 +100,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     /** После отброшенных кадров ждём ключевой: P-кадры без предшественников ломают картинку. */
     private volatile boolean waitKeyFrame;
     private volatile boolean direct;
+    /** Кадр AA в прямом режиме — для строки состояния. */
+    private volatile DirectProjection.Size directSize;
 
     public static State state() {
         return state;
@@ -416,6 +420,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         direct = !VIDEO_TRANSCODE.equals(mode);
         DirectProjection.Size size = VIDEO_DIRECT_LIGHT.equals(mode) ? DirectProjection.Size.LIGHT
                 : VIDEO_DIRECT_SMALL.equals(mode) ? DirectProjection.Size.SMALL : DirectProjection.Size.FULL;
+        directSize = size;
         CarScreen screen = new CarScreen(carWidth, carHeight, CAR_DPI, new CarScreen.Sink() {
             @Override
             public void onCodecConfig(byte[] spsPps) {
@@ -456,6 +461,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         sendAap(AapService.ACTION_START_SELF_MODE);
         setState(State.HANDSHAKE, getString(R.string.ol_aa_starting));
         NotificationManager nm = getSystemService(NotificationManager.class);
+        retryAaUntilStarted(nm);
         if (AaServer.isListening()) {
             nm.cancel(AA_SERVER_OFF_ID);
         } else {
@@ -470,6 +476,40 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
             setState(State.HANDSHAKE, howTo.replace('\n', ' '));
             notifyAaServerOff(nm);
         }
+    }
+
+    /**
+     * Сервер AA бывает выключен или ещё не поднят (HyperOS выгружает AA в фоне), и тогда первая попытка
+     * подключить Android Auto заканчивается ошибкой. Пока кабель подключён и AA ни разу не показался,
+     * раз в 3 с повторяем попытку, как только сервер доступен, — без переподключения кабеля. После первого
+     * успешного подключения не вмешиваемся: выход из AA — решение пользователя.
+     */
+    private void retryAaUntilStarted(NotificationManager nm) {
+        Timer t = timer;
+        if (t == null) {
+            return;
+        }
+        t.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                safely("повтор подключения Android Auto", () -> {
+                    CommManager.ConnectionState aa = App.Companion.provide(OvertakeLinkService.this)
+                            .getCommManager().getConnectionState().getValue();
+                    if (!connected || aa instanceof CommManager.ConnectionState.TransportStarted) {
+                        cancel();
+                        return;
+                    }
+                    boolean failed = aa instanceof CommManager.ConnectionState.Error
+                            || aa instanceof CommManager.ConnectionState.Disconnected;
+                    if (failed && AaServer.isListening()) {
+                        EventLog.add("Сервер Android Auto доступен — подключаем Android Auto снова");
+                        nm.cancel(AA_SERVER_OFF_ID);
+                        sendAap(AapService.ACTION_START_SELF_MODE);
+                        setState(State.HANDSHAKE, getString(R.string.ol_aa_starting));
+                    }
+                });
+            }
+        }, 3000, 3000);
     }
 
     /** Подсказка на телефоне: тап открывает настройки Android Auto, где включается сервер. */
@@ -504,7 +544,7 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         requestKeyFrame();
         EventLog.add("ГУ включило видео (" + (direct ? "прямой режим" : "перекодирование") + "): " + v.width + "x" + v.height
                 + ", ГУ просит " + v.bitRate + " бит/с" + (direct ? "" : ", кодировщик — " + BITRATE));
-        setState(State.RUNNING, direct ? getString(R.string.ol_running_direct, v.width, v.height)
+        setState(State.RUNNING, direct ? getString(R.string.ol_running_direct, directSize.getHeight())
                 : getString(R.string.ol_running_transcode, v.width, v.height, BITRATE / 1e6));
     }
 

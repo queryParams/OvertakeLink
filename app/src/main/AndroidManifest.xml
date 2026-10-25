@@ -472,7 +472,7 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:label="OvertakeLink"
-            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            android:theme="@style/OlTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

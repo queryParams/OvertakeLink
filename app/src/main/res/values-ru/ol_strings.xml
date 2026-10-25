@@ -46,6 +46,7 @@
 
     <string name="ol_terms_title">Условия использования</string>
     <string name="ol_terms_text">1. OvertakeLink — бесплатная программа с открытым кодом (лицензия GNU AGPL-3.0). Вы можете пользоваться ею, изучать, изменять и распространять на условиях этой лицензии.\n\n2. Программа предоставляется «как есть», без каких-либо гарантий. Вы используете её на свой риск. Авторы не отвечают за любой ущерб — телефону, головному устройству, автомобилю, данным — и за последствия на дороге.\n\n3. Безопасность. Не отвлекайтесь от дороги. Настраивайте OvertakeLink и Android Auto только на стоянке. Соблюдайте ПДД.\n\n4. OvertakeLink — независимый проект и не связан с Geely, Neusoft (QDLink) или Google. Названия этих компаний и их продуктов — товарные знаки владельцев.\n\n5. OvertakeLink использует режим разработчика Android Auto. Google может изменить его в любой момент — тогда OvertakeLink может перестать работать.\n\n6. Данные. OvertakeLink не собирает и никуда не отправляет ваши данные. Журнал работы хранится на телефоне, передаёте его вы сами. Для проверки и загрузки обновлений приложение обращается к GitHub.</string>
+    <string name="ol_terms_short">Условия</string>
     <string name="ol_terms_license">Полный текст лицензии: %1$s</string>
     <string name="ol_back">Назад</string>
     <string name="ol_accept">Принимаю</string>
@@ -103,9 +104,9 @@
     <string name="ol_video_failed_direct">Не удалось запустить видео: %1$s. Выберите режим видео «Совместимый»</string>
     <string name="ol_aa_starting">Экран машины готов, запускаем Android Auto</string>
     <string name="ol_aa_server_off">Сервер Android Auto выключен</string>
-    <string name="ol_aa_server_off_text">Нажмите → ⋮ → «Запустить сервер головного устройства», затем переподключите кабель</string>
-    <string name="ol_how_to_start">Включите на телефоне сервер Android Auto\n(Android Auto → ⋮ → «Запустить сервер головного устройства»)\nи переподключите кабель</string>
-    <string name="ol_running_direct">%1$d × %2$d · прямой режим</string>
+    <string name="ol_aa_server_off_text">Нажмите → ⋮ → «Запустить сервер головного устройства» — Android Auto подключится сам</string>
+    <string name="ol_how_to_start">Включите на телефоне сервер Android Auto\n(Android Auto → ⋮ → «Запустить сервер головного устройства»)\nAndroid Auto подключится сам</string>
+    <string name="ol_running_direct">Прямой режим %1$dp: поток Android Auto идёт на ГУ без перекодирования</string>
     <string name="ol_running_transcode">%1$d × %2$d · перекодирование %3$.1f Мбит/с</string>
     <string name="ol_video_paused">Машина приостановила видео</string>
     <string name="ol_car_starting">OvertakeLink\nЗапускаем Android Auto…</string>

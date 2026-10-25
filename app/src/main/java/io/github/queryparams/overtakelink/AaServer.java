@@ -24,7 +24,9 @@ public final class AaServer {
     /** Блокирует на миллисекунды: вызывать не из главного потока. */
     public static boolean isListening() {
         try (ServerSocket probe = new ServerSocket()) {
-            probe.setReuseAddress(false);
+            // Порт после выключенного сервера ещё ~минуту в TIME_WAIT: без SO_REUSEADDR занять его нельзя,
+            // и проверка приняла бы мёртвый сервер за работающий. С ним отказ значит — порт кто-то слушает.
+            probe.setReuseAddress(true);
             probe.bind(new InetSocketAddress(5277));
             return false;
         } catch (IOException e) {

@@ -22,6 +22,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -43,6 +44,10 @@ public final class OvertakeLinkActivity extends Activity {
     private LinearLayout content;
     private TextView[] tabs;
     private String screen = "status";
+    /** Условия показаны и приняты в этом запуске: при каждом открытии приложения они показываются заново. */
+    private boolean termsSeen;
+    /** Экран, на который вернёт «Назад» из условий, открытых кнопкой в шапке. */
+    private String beforeTerms = "status";
     private int setupStep;
     private volatile boolean aaServerUp;
     private long logVersion = -1;
@@ -69,6 +74,7 @@ public final class OvertakeLinkActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        termsSeen = state != null && state.getBoolean("termsSeen");
         EventLog.init(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -80,13 +86,29 @@ public final class OvertakeLinkActivity extends Activity {
         });
 
         LinearLayout head = row();
-        head.setPadding(dp(20), dp(16), dp(20), dp(8));
+        head.setPadding(dp(20), dp(16), dp(16), dp(8));
+        LinearLayout title = new LinearLayout(this);
+        title.setOrientation(LinearLayout.VERTICAL);
         TextView logo = text("OvertakeLink", 22, TEXT, true);
         logo.setText(android.text.Html.fromHtml("Overtake<font color='#FF7A45'>Link</font>", 0));
-        head.addView(logo, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        title.addView(logo);
         // Экран машины — каким его сообщило ГУ при последнем подключении.
         String car = getSharedPreferences("overtakelink", MODE_PRIVATE).getString("carScreen", null);
-        head.addView(text(car == null ? getString(R.string.ol_car_never) : getString(R.string.ol_car_screen, car), 12, MUTED, false));
+        title.addView(text(car == null ? getString(R.string.ol_car_never) : getString(R.string.ol_car_screen, car), 12, MUTED, false));
+        head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        // Условия и отказ от ответственности — всегда под рукой, на любом экране.
+        TextView terms = text(getString(R.string.ol_terms_short), 13, TEXT, false);
+        GradientDrawable termsBg = round(Color.TRANSPARENT, 16);
+        termsBg.setStroke(dp(1), 0xFF3A4049);
+        terms.setBackground(termsBg);
+        terms.setPadding(dp(14), dp(8), dp(14), dp(8));
+        terms.setOnClickListener(v -> {
+            if (!screen.equals("terms")) {
+                beforeTerms = screen;
+            }
+            show("terms");
+        });
+        head.addView(terms);
         root.addView(head);
 
         ScrollView scroll = new ScrollView(this);
@@ -112,10 +134,21 @@ public final class OvertakeLinkActivity extends Activity {
             nav.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         }
         root.addView(nav);
-        setContentView(root);
+        FrameLayout frame = new FrameLayout(this);
+        frame.addView(root);
+        setContentView(frame);
+        if (state == null) {
+            SplashOverlay.show(frame);
+        }
 
         boolean firstRun = !getSharedPreferences("overtakelink", MODE_PRIVATE).getBoolean("setupDone", false);
-        show(!Terms.accepted(this) ? "terms" : firstRun ? "setup" : "status");
+        show(firstRun ? "setup" : "status");
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        out.putBoolean("termsSeen", termsSeen);
     }
 
     @Override
@@ -133,8 +166,8 @@ public final class OvertakeLinkActivity extends Activity {
     }
 
     private void show(String id) {
-        // Пока условия не приняты, вкладки ведут только на них.
-        screen = Terms.accepted(this) ? id : "terms";
+        // При каждом открытии приложения сначала условия: пока их не приняли, вкладки ведут только на них.
+        screen = termsSeen && Terms.accepted(this) ? id : "terms";
         String[] ids = {"status", "settings", "log"};
         for (int i = 0; i < tabs.length; i++) {
             tabs[i].setTextColor(ids[i].equals(id) ? ACCENT : MUTED);
@@ -268,19 +301,21 @@ public final class OvertakeLinkActivity extends Activity {
     // ---------- Условия использования ----------
 
     private void renderTerms() {
-        boolean accepted = Terms.accepted(this);
         LinearLayout card = card();
         card.addView(text(getString(R.string.ol_terms_title), 22, TEXT, true));
         TextView body = text(getString(R.string.ol_terms_text), 14, 0xFFC3C9D1, false);
         body.setPadding(0, dp(12), 0, dp(12));
         card.addView(body);
         card.addView(text(getString(R.string.ol_terms_license, "github.com/" + UpdateCheck.REPO + "/blob/main/LICENSE"), 12, MUTED, false));
-        if (accepted) {
-            card.addView(button(getString(R.string.ol_back), false, v -> show("settings")));
+        if (termsSeen) {
+            card.addView(button(getString(R.string.ol_back), false, v -> show(beforeTerms)));
         } else {
             card.addView(button(getString(R.string.ol_accept), true, v -> {
+                if (!Terms.accepted(this)) {
+                    EventLog.add("Условия использования приняты (версия " + Terms.VERSION + ")");
+                }
                 Terms.accept(this);
-                EventLog.add("Условия использования приняты (версия " + Terms.VERSION + ")");
+                termsSeen = true;
                 boolean firstRun = !getSharedPreferences("overtakelink", MODE_PRIVATE).getBoolean("setupDone", false);
                 show(firstRun ? "setup" : "status");
             }));
@@ -396,7 +431,6 @@ public final class OvertakeLinkActivity extends Activity {
         });
         launch.addView(check);
         launch.addView(button(getString(R.string.ol_setup_again), false, v -> { setupStep = 0; show("setup"); }));
-        launch.addView(button(getString(R.string.ol_terms_title), false, v -> show("terms")));
         content.addView(launch, cardLp());
 
         LinearLayout aa = card();
