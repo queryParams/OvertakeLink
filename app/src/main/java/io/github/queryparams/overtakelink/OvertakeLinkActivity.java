@@ -375,26 +375,71 @@ public final class OvertakeLinkActivity extends Activity {
         try {
             switch (setupStep) {
                 case 0:
-                    requestPermissions(Build.VERSION.SDK_INT >= 33
-                            ? new String[]{Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.RECORD_AUDIO}
-                            : new String[]{Manifest.permission.RECORD_AUDIO}, 1);
+                    if (checks()[0].ok) {
+                        nextSetupStep();
+                    } else {
+                        requestPermissions(SETUP_PERMISSIONS, 1);
+                    }
                     break;
                 case 1:
-                    startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                            Uri.parse("package:" + getPackageName())));
+                    if (checks()[1].ok) {
+                        nextSetupStep();
+                        break;
+                    }
+                    try {
+                        startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                Uri.parse("package:" + getPackageName())));
+                    } catch (Exception e) {
+                        // Некоторые прошивки не дают этот диалог — тогда общий список оптимизации батареи.
+                        startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                    }
                     break;
                 case 2:
                     openAndroidAuto();
                     break;
                 case 3:
-                    setupStep++;
-                    render();
+                    nextSetupStep();
                     break;
                 default:
                     startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
             }
         } catch (Exception e) {
             ToastUtils.showToast(this, getString(R.string.ol_open_failed, e.getMessage()), Toast.LENGTH_LONG, true);
+        }
+    }
+
+    private static final String[] SETUP_PERMISSIONS = Build.VERSION.SDK_INT >= 33
+            ? new String[]{Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.RECORD_AUDIO}
+            : new String[]{Manifest.permission.RECORD_AUDIO};
+
+    private void nextSetupStep() {
+        setupStep++;
+        render();
+    }
+
+    /**
+     * Отказ «больше не спрашивать» (или два отказа подряд): Android перестаёт показывать запрос, и кнопка
+     * молчала бы. Тогда ведём в настройки приложения — там разрешения включаются вручную.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode != 1 || !screen.equals("setup")) {
+            return;
+        }
+        boolean blocked = false;
+        for (int i = 0; i < permissions.length; i++) {
+            if (results[i] != PackageManager.PERMISSION_GRANTED && !shouldShowRequestPermissionRationale(permissions[i])) {
+                blocked = true;
+            }
+        }
+        if (checks()[0].ok) {
+            nextSetupStep();
+        } else if (blocked) {
+            ToastUtils.showToast(this, getString(R.string.ol_permissions_in_settings), Toast.LENGTH_LONG, true);
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName())));
+        } else {
+            render();
         }
     }
 

@@ -115,4 +115,5 @@
     <string name="ol_car_mic_note">The car’s microphone for the Assistant instead of the phone’s. Whether your head unit supports it is unknown: if the car sends no sound, the phone’s microphone takes over after 1.5 s. Applies the next time you plug in the cable.</string>
     <string name="ol_car_mic_on">Car microphone: on</string>
     <string name="ol_car_mic_off">Car microphone: off</string>
+    <string name="ol_permissions_in_settings">Allow “Notifications” and “Microphone” in the app settings, then come back</string>
 </resources>
