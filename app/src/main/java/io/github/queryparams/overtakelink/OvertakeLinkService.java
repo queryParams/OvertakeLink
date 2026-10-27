@@ -108,6 +108,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     private volatile boolean direct;
     /** Кадр AA в прямом режиме — для строки состояния. */
     private volatile DirectProjection.Size directSize;
+    /** Размер видео из команды play ГУ — для строки статуса. */
+    private volatile int videoWidth, videoHeight;
     private volatile MicRecorder.ExternalMic.Sink carMicSink;
     private volatile boolean carMicHeard;
     /** ГУ уже промолчало в этом подключении: дальше сразу микрофон телефона, без потери начала фразы. */
@@ -548,8 +550,17 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
                 safely("повтор подключения Android Auto", () -> {
                     CommManager.ConnectionState aa = App.Companion.provide(OvertakeLinkService.this)
                             .getCommManager().getConnectionState().getValue();
-                    if (!connected || aa instanceof CommManager.ConnectionState.TransportStarted) {
+                    if (!connected) {
                         cancel();
+                        return;
+                    }
+                    if (aa instanceof CommManager.ConnectionState.TransportStarted) {
+                        cancel();
+                        // Пока AA запускался, статус перезаписывался «запускаем Android Auto»; видео уже идёт — вернуть.
+                        LinkSession s = session;
+                        if (s != null && s.videoPlaying()) {
+                            setState(State.RUNNING, runningText());
+                        }
                         return;
                     }
                     boolean failed = aa instanceof CommManager.ConnectionState.Error
@@ -595,10 +606,16 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         // Показ начинается с SPS/PPS и ключевого кадра: обычные кадры до них декодер ГУ показать не может.
         waitKeyFrame = true;
         requestKeyFrame();
+        videoWidth = v.width;
+        videoHeight = v.height;
         EventLog.add("ГУ включило видео (" + (direct ? "прямой режим" : "перекодирование") + "): " + v.width + "x" + v.height
                 + ", ГУ просит " + v.bitRate + " бит/с" + (direct ? "" : ", кодировщик — " + BITRATE));
-        setState(State.RUNNING, direct ? getString(R.string.ol_running_direct, directSize.getHeight())
-                : getString(R.string.ol_running_transcode, v.width, v.height, BITRATE / 1e6));
+        setState(State.RUNNING, runningText());
+    }
+
+    private String runningText() {
+        return direct ? getString(R.string.ol_running_direct, directSize.getHeight())
+                : getString(R.string.ol_running_transcode, videoWidth, videoHeight, BITRATE / 1e6);
     }
 
     /** ГУ остановило видео: перестаём слать кадры, Android Auto продолжает работать. */
