@@ -992,6 +992,10 @@ class AapService : Service() {
                 AppLog.i("WakeDetect: connection active, but PiP is active. Skipping return to full screen.")
                 return
             }
+            if (io.github.queryparams.overtakelink.car.CarScreen.current() != null) {
+                AppLog.i("WakeDetect: connection active, the projection is on the car screen")
+                return
+            }
             AppLog.i("WakeDetect: connection active, returning to projection")
             try {
                 val projectionIntent = AapProjectionActivity.intent(this).apply {

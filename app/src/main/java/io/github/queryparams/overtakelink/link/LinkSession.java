@@ -2,14 +2,16 @@ package io.github.queryparams.overtakelink.link;
 
 import org.json.JSONObject;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Протокол QDLink без Android: разбор входящего потока, ответы ГУ, упаковка видео.
  * Всё, что трогает устройство (USB, кодировщик, экран), делает {@link Host}.
- * Протокол «!BIN» (блоки по 512 байт) с прикладными сообщениями «A6A6». Головные устройства
- * с другой версией протокола QDLink не поддерживаются.
+ * Протокол «!BIN» (блоки по 512 байт) с прикладными сообщениями «A6A6» — проверен на Geely Atlas Pro.
+ * Новый протокол «5A5A» + JSON — по коду родного QDLink 1.9.7, на машине не проверен.
  */
 public final class LinkSession {
 
@@ -49,7 +51,7 @@ public final class LinkSession {
         void scheduleRepeating(long delayMs, long periodMs, Runnable task);
     }
 
-    public enum Proto { UNKNOWN, OLD }
+    public enum Proto { UNKNOWN, OLD, NEW }
 
     private final Host host;
     private final Packets.Video video = new Packets.Video();
@@ -75,8 +77,15 @@ public final class LinkSession {
         return proto;
     }
 
-    /** Раз в 3 с. Пока ГУ молчит — AppStatus (ГУ начинает слушать через ~30 с и отвечает на первый пакет после этого). */
+    /**
+     * Раз в 3 с. Пока ГУ молчит — AppStatus (ГУ начинает слушать через ~30 с и отвечает на первый пакет после этого).
+     * В протоколе 5A5A родной QDLink всё время шлёт HEARTBEAT раз в 3 с.
+     */
     public synchronized void tick() {
+        if (proto == Proto.NEW) {
+            host.send(NewPackets.json(HEARTBEAT));
+            return;
+        }
         if (proto == Proto.UNKNOWN) {
             appStatusSent++;
             if (appStatusSent == 1 || appStatusSent % 5 == 0) {
@@ -95,9 +104,12 @@ public final class LinkSession {
         return videoRunning;
     }
 
-    /** Упаковка кадра H.264 в видеопакет. */
     /** Микрофон ГУ: при включении ГУ шлёт его звук пакетами dataType 12 (приходят в {@link Host#micData}). */
-    public void speech(boolean on) {
+    public synchronized void speech(boolean on) {
+        if (proto == Proto.NEW) {
+            sendCmd("SPEECH_CTRL", put(new JSONObject(), "SpeechStatus", on ? 1 : 0));
+            return;
+        }
         EventLog.add("→ ГУ: микрофон машины " + (on ? "включить" : "выключить") + " (!BIN cmd 21, value " + (on ? 1 : 0) + ")");
         host.send(OldPackets.speechControl(on));
     }
@@ -108,7 +120,11 @@ public final class LinkSession {
         video.frameHeight = height;
     }
 
+    /** Упаковка кадра H.264 в видеопакет. */
     public synchronized byte[] videoPacket(byte[] data, int off, int len) {
+        if (proto == Proto.NEW) {
+            return NewPackets.video(video, data, off, len);
+        }
         return OldPackets.video(screenReq, video, data, off, len);
     }
 
@@ -140,6 +156,25 @@ public final class LinkSession {
             if (len - pos < 16) {
                 break;
             }
+            if (b[pos] == '5') {
+                int total = OldPackets.i32(b, pos + 4);
+                if (total < NewPackets.HEADER || total > (8 << 20)) {
+                    EventLog.add("← ГУ: 5A5A с размером " + total + ": " + EventLog.hex(b, pos, 16, 16));
+                    pos += 4;
+                    continue;
+                }
+                if (len - pos < total) {
+                    break;
+                }
+                try {
+                    setProto(Proto.NEW);
+                    handleNew(b, pos, total);
+                } catch (RuntimeException e) {
+                    EventLog.error("обработка пакета 5A5A, hex " + EventLog.hex(b, pos, total, 96), e);
+                }
+                pos += total;
+                continue;
+            }
             int total = OldPackets.i32(b, pos + 8);
             if (total < OldPackets.BLOCK || total > (8 << 20)) {
                 total = OldPackets.BLOCK;
@@ -164,6 +199,9 @@ public final class LinkSession {
             if (b[i] == '!' && b[i + 1] == 'B' && b[i + 2] == 'I' && b[i + 3] == 'N') {
                 return i;
             }
+            if (b[i] == '5' && b[i + 1] == 'A' && b[i + 2] == '5' && b[i + 3] == 'A') {
+                return i;
+            }
         }
         return -1;
     }
@@ -182,7 +220,7 @@ public final class LinkSession {
             return;
         }
         proto = p;
-        EventLog.add("ГУ говорит протоколом !BIN");
+        EventLog.add(p == Proto.NEW ? "ГУ говорит протоколом 5A5A + JSON (новый QDLink, экспериментально)" : "ГУ говорит протоколом !BIN");
     }
 
     private static void logUnknown(String what, byte[] b, int off, int total) {
@@ -432,6 +470,198 @@ public final class LinkSession {
         host.scheduleRepeating(1000, 1000, () -> host.send(packet));
     }
 
+    // ---------- новый протокол 5A5A ----------
+
+    private static final String HEARTBEAT = "{\"CMD\":\"HEARTBEAT\"}";
+
+    private void handleNew(byte[] b, int off, int total) {
+        int ext = ByteBuffer.wrap(b, off + 8, 2).getShort() & 0xffff;
+        int msgType = b[off + 10] & 0xff;
+        int fmt = b[off + 13] & 0xff;
+        int reserved = b[off + 14] & 0xff;
+        int bodyOff = off + NewPackets.HEADER + ext;
+        int bodyLen = total - NewPackets.HEADER - ext;
+        if (bodyLen < 0) {
+            logUnknown("5A5A: доп. заголовок длиннее пакета", b, off, total);
+            return;
+        }
+        switch (msgType) {
+            case NewPackets.TYPE_CMD:
+                if (fmt == NewPackets.FORMAT_JSON) {
+                    onCommand(new String(b, bodyOff, bodyLen, StandardCharsets.UTF_8).trim());
+                } else {
+                    logUnknown("5A5A команда в формате " + fmt, b, off, total);
+                }
+                return;
+            case NewPackets.TYPE_TOUCH:
+                onTouch(b, bodyOff, bodyLen);
+                return;
+            case NewPackets.TYPE_SPEECH:
+                host.micData(b, bodyOff, bodyLen);
+                return;
+            default:
+                logUnknown("5A5A тип " + msgType + ", формат " + fmt + ", резерв " + reserved, b, off, total);
+                host.caption("ГУ: 5A5A тип " + msgType);
+        }
+    }
+
+    private void onCommand(String json) {
+        JSONObject root;
+        try {
+            root = new JSONObject(json);
+        } catch (Exception e) {
+            EventLog.add("← ГУ: JSON не разобран: " + json);
+            return;
+        }
+        String cmd = root.optString("CMD", "");
+        if ("HEARTBEAT".equals(cmd)) {
+            if (heartbeatsReceived++ % 20 == 0) {
+                EventLog.add("← ГУ: HEARTBEAT, всего " + heartbeatsReceived);
+            }
+            return;
+        }
+        EventLog.add("← ГУ: " + json);
+        JSONObject para = root.optJSONObject("PARA");
+        if (para == null) {
+            para = new JSONObject();
+        }
+        switch (cmd) {
+            case "CAR_INFO":
+                onCarInfo(para);
+                break;
+            case "VIDEO_SUP_REQ": {
+                JSONObject rsp = new JSONObject();
+                put(rsp, "VideoFormat", 3);
+                put(rsp, "VideoSupport", 1);
+                sendCmd("VIDEO_SUP_RSP", rsp);
+                break;
+            }
+            case "VIDEO_ARGS": {
+                int w = para.optInt("Width", 0);
+                int h = para.optInt("Height", 0);
+                video.width = w > 0 ? w : carWidth;
+                video.height = h > 0 ? h : carHeight;
+                video.encodingType = para.optInt("EncodingType", 3);
+                video.frameRate = para.optInt("FrameRate", 24);
+                video.bitRate = para.optInt("BitRate", 0);
+                video.frameInterval = para.optInt("FrameInterval", 4);
+                JSONObject speech = new JSONObject();
+                put(speech, "EncodingType", 1);
+                put(speech, "SampleRate", 16000);
+                put(speech, "ChannelConfig", 1);
+                put(speech, "AudioFormat", 16);
+                sendCmd("SPEECH_ARGS", speech);
+                break;
+            }
+            case "VIDEO_CTRL":
+                if (para.optInt("PlayStatus", 0) == 1) {
+                    startVideo();
+                } else {
+                    stopVideo();
+                }
+                break;
+            case "KEY_FRAME_REQ":
+                keyFrameRequests++;
+                if (videoRunning) {
+                    host.requestKeyFrame();
+                }
+                break;
+            case "LAND_MODE_REQ": {
+                // Как у родного QDLink без права рисовать поверх окон: Authority 2.
+                JSONObject rsp = new JSONObject();
+                put(rsp, "Orientation", para.optInt("Orientation", 0));
+                put(rsp, "Authority", 2);
+                put(rsp, "StatusArg", 0);
+                sendCmd("LAND_MODE_RSP", rsp);
+                break;
+            }
+            case "DISCONNECT_REQ":
+                stopVideo();
+                break;
+            default:
+                host.caption("ГУ: " + cmd);
+        }
+    }
+
+    /** Ответ как у родного QDLink 1.9.7 (linkconnection.a.B0 и z0): PHONE_INFO, затем UPDATE_NOTIFY 5. */
+    private void onCarInfo(JSONObject para) {
+        int w = para.optInt("CarWidth", 0);
+        int h = para.optInt("CarHeight", 0);
+        carWidth = w > 0 ? w : 800;
+        carHeight = h > 0 ? h : 480;
+        geometry = host.geometry(carWidth, carHeight);
+        EventLog.add("ГУ: " + para.optString("CarFactory") + " " + para.optString("CarType") + ", протокол "
+                + para.optString("Version") + ", экран " + carWidth + "x" + carHeight);
+        JSONObject info = new JSONObject();
+        put(info, "PhoneWidth", geometry.phoneLong);
+        put(info, "PhoneHeight", geometry.phoneShort);
+        put(info, "MirrorWidth", geometry.outAppWidth);
+        put(info, "MirrorHeight", geometry.outAppHeight);
+        put(info, "PhoneWidthInApp", carWidth);
+        put(info, "PhoneHeightInApp", carHeight);
+        put(info, "MirrorWidthInApp", carWidth);
+        put(info, "MirrorHeightInApp", carHeight);
+        put(info, "MirrorTypeSupport", para.optInt("MirrorTypeReq", 0));
+        put(info, "PhoneBrand", host.phoneBrand());
+        put(info, "PhoneModel", host.phoneModel());
+        put(info, "PhoneName", host.phoneModel());
+        put(info, "PhoneUUID", host.phoneUuid());
+        put(info, "PhoneSystemTime", 0);
+        put(info, "Platform", 0);
+        put(info, "PlatformVersion", String.valueOf(host.sdk()));
+        put(info, "Version", "1.9.7");
+        put(info, "PhoneFeature", put(new JSONObject(), "PassistMobileNum", ""));
+        sendCmd("PHONE_INFO", info);
+        sendCmd("UPDATE_NOTIFY", put(new JSONObject(), "UpdateStatus", 5));
+        host.carScreen(carWidth, carHeight);
+    }
+
+    /**
+     * Касание (тип 2, класс h0.e): int action, byte число пальцев, на палец — byte номер, byte действие
+     * (1 нажатие, 2 отпускание, 3 движение), float x, float y. Родной QDLink берёт только палец 0.
+     */
+    private void onTouch(byte[] b, int off, int len) {
+        if (len < 5) {
+            EventLog.add("← ГУ: короткое касание: " + EventLog.hex(b, off, len, 64));
+            return;
+        }
+        ByteBuffer bb = ByteBuffer.wrap(b, off, len);
+        bb.getInt();
+        int count = bb.get() & 0xff;
+        for (int i = 0; i < count && bb.remaining() >= 10; i++) {
+            int id = bb.get();
+            int fingerAction = bb.get();
+            float x = bb.getFloat();
+            float y = bb.getFloat();
+            if (id != 0) {
+                continue;
+            }
+            int action = fingerAction == 2 ? 1 : fingerAction == 3 ? 2 : 0;
+            if (action != 2) {
+                EventLog.add(String.format(Locale.US, "← ГУ: касание %s x %.0f, y %.0f",
+                        action == 0 ? "нажатие" : "отпускание", x, y));
+            }
+            host.touch(action, x, y);
+        }
+    }
+
+    private void sendCmd(String cmd, JSONObject para) {
+        JSONObject o = new JSONObject();
+        put(o, "CMD", cmd);
+        put(o, "PARA", para);
+        String json = o.toString();
+        EventLog.add("→ ГУ: " + json);
+        host.send(NewPackets.json(json));
+    }
+
+    private static JSONObject put(JSONObject o, String key, Object value) {
+        try {
+            return o.put(key, value);
+        } catch (org.json.JSONException e) {
+            throw new IllegalArgumentException(key, e);
+        }
+    }
+
     // ---------- видео ----------
 
     private void startVideo() {
@@ -443,7 +673,7 @@ public final class LinkSession {
             video.width = carWidth;
             video.height = carHeight;
         }
-        if (screenReq == null) {
+        if (proto == Proto.OLD && screenReq == null) {
             screenReq = new byte[OldPackets.BLOCK];
             OldPackets.applyScreenDefaults(screenReq);
             EventLog.add("Видео: ГУ не прислало запрос захвата экрана, заголовок строится с нуля");

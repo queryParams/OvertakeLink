@@ -87,8 +87,10 @@ from the file (more in [Privacy](PRIVACY.md)).
 - Tested: **Geely Atlas Pro 2023**, head unit HW NL3B (1920×590 screen), firmware
   SWONL3B0202H5177.00093 (“firmware 93”). This head unit speaks QDLink with `!BIN` packets.
 - Other head units with the same QDLink format will most likely work too: OvertakeLink takes the
-  screen size from the head unit itself. Head units with other QDLink protocol versions are not
-  supported yet.
+  screen size from the head unit itself.
+- Head units with the newer QDLink protocol (`5A5A` + JSON, e.g. Geely Okavango) are **experimental**
+  since 0.9.7: the protocol follows the stock QDLink code and is tested only in the emulator. If you
+  have such a head unit, please send the app log in [Issues](../../issues).
 - Direct mode depends on the head unit decoder: if the car screen stays black, try “Direct 720p”,
   then “Direct 480p”; if that doesn’t help, choose “Compatible”. On the Geely Atlas Pro 2023 direct
   480p shows a picture; 720p and 1080p were reworked in 0.9.1 and are still being tested; compatible
@@ -123,7 +125,7 @@ Android Auto (on the phone) ──AAP over localhost──► OvertakeLink ─�
 
 1. The head unit connects to the phone over USB as a QDLink accessory (`Neusoft / QDriveLink`);
    Android opens OvertakeLink.
-2. OvertakeLink speaks the QDLink protocol (`!BIN` format, 512-byte packets) — the head unit
+2. OvertakeLink speaks the QDLink protocol (`!BIN` format, 512-byte packets; newer head units — `5A5A` + JSON) — the head unit
    thinks it is talking to the stock app.
 3. The built-in Android Auto receiver (from [Open Headunit](https://github.com/andreknieriem/headunit-revived))
    connects to Android Auto on the same phone through its “head unit server”.

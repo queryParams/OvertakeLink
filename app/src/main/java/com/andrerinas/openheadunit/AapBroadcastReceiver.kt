@@ -67,6 +67,8 @@ class AapBroadcastReceiver : BroadcastReceiver() {
                 )
             }
         } else if (intent.action == ProjectionActivityRequest.action){
+            // OvertakeLink: проекция на экране машины; экран проекции на телефоне забрал бы себе декодер видео.
+            if (io.github.queryparams.overtakelink.car.CarScreen.current() != null) return
             if (component.commManager.connectionState.value is CommManager.ConnectionState.TransportStarted) {
                 val aapIntent = Intent(context, AapProjectionActivity::class.java)
                 aapIntent.putExtra(AapProjectionActivity.EXTRA_FOCUS, true)
