@@ -42,10 +42,19 @@ public final class NewPackets {
 
     /** Команда {"CMD":…,"PARA":…} (msgType 0, формат JSON). */
     public static byte[] json(String json) {
+        return jsonPacket(TYPE_CMD, json);
+    }
+
+    /** Прикладное сообщение {"AppID":…,"FunctionID":…,"Para":…} (msgType 13, формат JSON), как linkconnection.a.k0. */
+    public static byte[] app(String json) {
+        return jsonPacket(TYPE_APP, json);
+    }
+
+    private static byte[] jsonPacket(int msgType, String json) {
         byte[] payload = json.getBytes(StandardCharsets.UTF_8);
         int total = HEADER + payload.length;
         ByteBuffer b = ByteBuffer.allocate(Packets.padded(total));
-        header(b, total, 0, TYPE_CMD, FORMAT_JSON);
+        header(b, total, 0, msgType, FORMAT_JSON);
         b.put(payload);
         return b.array();
     }

@@ -17,6 +17,14 @@ class NewPacketsTest {
     }
 
     @Test
+    fun `app message is msgType 13 in JSON format`() {
+        val p = NewPackets.app("""{"AppID":"Mirror"}""")
+        assertEquals(NewPackets.TYPE_APP, p[10].toInt())
+        assertEquals(NewPackets.FORMAT_JSON, p[13].toInt())
+        assertEquals(512, p.size)
+    }
+
+    @Test
     fun `video carries the stream frame size and the data at 48`() {
         val v = Packets.Video().apply {
             width = 1920; height = 720; frameWidth = 1920; frameHeight = 1080

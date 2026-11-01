@@ -65,6 +65,8 @@ public final class LinkSession {
     private int appStatusSent;
     private int heartbeatsReceived;
     private boolean legalTimerStarted;
+    /** В CAR_INFO протокола 5A5A: CarFeature.legal_app_watch == 1 — ГУ следит, разрешённое ли приложение на экране. */
+    private boolean newLegalWatch;
     private boolean videoRunning;
     /** Запросы ключевого кадра от ГУ за показ видео (в журнал — 1-й, 2-й, 4-й…): частые — декодер ГУ не справляется. */
     private int keyFrameRequests;
@@ -534,6 +536,9 @@ public final class LinkSession {
                 put(rsp, "VideoFormat", 3);
                 put(rsp, "VideoSupport", 1);
                 sendCmd("VIDEO_SUP_RSP", rsp);
+                if (newLegalWatch) {
+                    startWhitelistTimer();
+                }
                 break;
             }
             case "VIDEO_ARGS": {
@@ -613,7 +618,30 @@ public final class LinkSession {
         put(info, "PhoneFeature", put(new JSONObject(), "PassistMobileNum", ""));
         sendCmd("PHONE_INFO", info);
         sendCmd("UPDATE_NOTIFY", put(new JSONObject(), "UpdateStatus", 5));
+        // Сердцебиение — сразу, а не с ближайшим тиком: ГУ может ждать его, прежде чем идти дальше.
+        host.send(NewPackets.json(HEARTBEAT));
+        JSONObject feature = para.optJSONObject("CarFeature");
+        newLegalWatch = feature != null && feature.optInt("legal_app_watch") == 1;
         host.carScreen(carWidth, carHeight);
+    }
+
+    /**
+     * Как родной QDLink при legal_app_watch == 1 (DLinkNotifyL.a1 после ответа VIDEO_SUP_RSP): раз в секунду
+     * сообщаем, что на экране разрешённое приложение — {"AppID":"Mirror","FunctionID":"WhitelistAppOn",…}.
+     */
+    private void startWhitelistTimer() {
+        if (legalTimerStarted) {
+            return;
+        }
+        legalTimerStarted = true;
+        JSONObject msg = new JSONObject();
+        put(msg, "AppID", "Mirror");
+        put(msg, "FunctionID", "WhitelistAppOn");
+        put(msg, "Para", put(new JSONObject(), "WhitelistAppOn", 1));
+        String json = msg.toString();
+        EventLog.add("ГУ включило контроль приложений: раз в секунду сообщаем, что приложение разрешено: " + json);
+        byte[] packet = NewPackets.app(json);
+        host.scheduleRepeating(1000, 1000, () -> host.send(packet));
     }
 
     /**

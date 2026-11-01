@@ -50,6 +50,14 @@ public final class EventLog {
         }
         file = new File(context.getFilesDir(), "overtakelink-log.txt");
         open();
+        // Падение приложения — в журнал: иначе после вылета в нём не видно, что случилось.
+        Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, e) -> {
+            error("ПАДЕНИЕ приложения в потоке «" + thread.getName() + "»", e);
+            if (previous != null) {
+                previous.uncaughtException(thread, e);
+            }
+        });
     }
 
     /** Журнал запущен приложением (в модульных тестах Open Headunit — нет: там нет ни Context, ни logcat). */
