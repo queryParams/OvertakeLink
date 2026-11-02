@@ -5,7 +5,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.IntentFilter;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
@@ -74,6 +76,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     public static final String PREF_CAR_MIC = "carMic";
     /** Сколько ждать звук от микрофона машины, прежде чем писать с телефона. */
     private static final long CAR_MIC_WAIT_MS = 1500;
+    /** Сколько секунд ждать, пока прежнее соединение отпустит аксессуар. */
+    private static final int OPEN_WAIT_S = 20;
     public static final String VIDEO_DIRECT = "direct";
     public static final String VIDEO_DIRECT_LIGHT = "direct720";
     public static final String VIDEO_DIRECT_SMALL = "direct480";
@@ -101,6 +105,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     private Timer timer;
     private volatile LinkSession session;
     private volatile boolean connected;
+    /** Сигнал Android «машина отсоединена» — пока есть USB-соединение. */
+    private BroadcastReceiver detachReceiver;
     private volatile long connectedAt;
     private long videoDropped;
     /** После отброшенных кадров ждём ключевой: P-кадры без предшественников ломают картинку. */
@@ -242,7 +248,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? null : intent.getAction();
         if (ACTION_CONNECT_USB.equals(action)) {
-            safely("подключение USB", this::connectUsb);
+            // В своём потоке: открытие занятого аксессуара повторяется несколько секунд.
+            new Thread(() -> safely("подключение USB", this::connectUsb), "ol-usb").start();
         } else if (ACTION_CONNECT_SIM.equals(action) && BuildConfig.SIM_LINK) {
             String target = intent.getStringExtra(EXTRA_SIM);
             new Thread(() -> safely("подключение к имитатору ГУ", () -> connectSim(target)), "ol-sim").start();
@@ -280,33 +287,75 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
 
     // ---------- USB ----------
 
+    /**
+     * Подключение кабеля. Если старое соединение ещё числится живым — кабель переподключили, а чтение старого
+     * не заметило обрыва (на части телефонов оно висит до минуты): старое закрываем и подключаемся заново.
+     * Пока висящее чтение держит аксессуар, Android не даёт открыть его снова — пробуем до {@link #OPEN_WAIT_S} с.
+     */
     private synchronized void connectUsb() {
+        EventLog.add("USB: Android сообщил о подключении машины");
         if (connected) {
-            return;
+            EventLog.add("USB: прежнее соединение ещё числится живым — машина подключилась заново, закрываем прежнее");
+            close("переподключение кабеля", session, false);
         }
         UsbManager usb = getSystemService(UsbManager.class);
         UsbAccessory[] list = usb.getAccessoryList();
         if (list == null || list.length == 0) {
+            EventLog.add("USB: аксессуара машины нет в списке Android");
             idle(getString(R.string.ol_car_not_found));
             return;
         }
         UsbAccessory acc = list[0];
         EventLog.add("USB: аксессуар «" + acc.getManufacturer() + " / " + acc.getModel() + "», версия " + acc.getVersion());
         if (!usb.hasPermission(acc)) {
+            EventLog.add("USB: нет разрешения на аксессуар");
             idle(getString(R.string.ol_no_usb_permission));
             return;
         }
-        ParcelFileDescriptor pfd = usb.openAccessory(acc);
+        ParcelFileDescriptor pfd = null;
+        int tries = 0;
+        while (pfd == null && tries < OPEN_WAIT_S) {
+            tries++;
+            pfd = usb.openAccessory(acc);
+            if (pfd == null) {
+                if (tries == 1) {
+                    EventLog.add("USB: аксессуар занят — ждём, пока его отпустит прежнее соединение (до " + OPEN_WAIT_S + " с)");
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+        }
         if (pfd == null) {
+            EventLog.add("USB: аксессуар так и не открылся за " + OPEN_WAIT_S + " с");
             idle(getString(R.string.ol_usb_busy));
             return;
         }
+        if (tries > 1) {
+            EventLog.add("USB: аксессуар открыт с попытки " + tries);
+        }
         open(pfd, new FileInputStream(pfd.getFileDescriptor()), new FileOutputStream(pfd.getFileDescriptor()));
+        watchDetach();
+    }
+
+    /** Отсоединение кабеля — сразу закрываем соединение, не дожидаясь ошибки чтения. */
+    private void watchDetach() {
+        LinkSession s = session;
+        detachReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent i) {
+                new Thread(() -> close("Android: машина отсоединена", s, true), "ol-detach").start();
+            }
+        };
+        registerReceiver(detachReceiver, new IntentFilter(UsbManager.ACTION_USB_ACCESSORY_DETACHED), Context.RECEIVER_NOT_EXPORTED);
     }
 
     private synchronized void connectSim(String target) {
         if (connected) {
-            return;
+            EventLog.add("Имитатор ГУ: прежнее соединение ещё числится живым — закрываем прежнее");
+            close("переподключение", session, false);
         }
         int colon = target.lastIndexOf(':');
         Socket socket;
@@ -336,8 +385,8 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         MicRecorder.setExternalMic(getSharedPreferences("overtakelink", MODE_PRIVATE).getBoolean(PREF_CAR_MIC, false) ? carMic : null);
         setState(State.HANDSHAKE, getString(R.string.ol_waiting_hu));
         timer = new Timer("ol-timer");
-        new Thread(() -> readLoop(s), "ol-reader").start();
-        new Thread(() -> writeLoop(o), "ol-writer").start();
+        new Thread(() -> readLoop(s, i), "ol-reader").start();
+        new Thread(() -> writeLoop(s, o), "ol-writer").start();
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -347,8 +396,16 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     }
 
     private void disconnect(String reason) {
+        close(reason, session, true);
+    }
+
+    /**
+     * Закрыть соединение s, если оно ещё текущее: потоки прежнего соединения, очнувшись после
+     * переподключения, не должны закрыть новое. idle — машины больше нет, сервис можно остановить.
+     */
+    private void close(String reason, LinkSession s, boolean idle) {
         synchronized (this) {
-            if (!connected) {
+            if (!connected || s != session) {
                 return;
             }
             connected = false;
@@ -357,6 +414,10 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
             if (timer != null) {
                 timer.cancel();
                 timer = null;
+            }
+            if (detachReceiver != null) {
+                unregisterReceiver(detachReceiver);
+                detachReceiver = null;
             }
         }
         tearDownCar();
@@ -372,7 +433,9 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         } catch (Exception e) {
             EventLog.error("выгрузка журнала", e);
         }
-        idle(getString(R.string.ol_plug_cable));
+        if (idle) {
+            idle(getString(R.string.ol_plug_cable));
+        }
     }
 
     /**
@@ -391,36 +454,36 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
      * Читаем строго по 512 байт, как родной QDLink: ГУ шлёт пакеты ровно по 512 байт без признака конца
      * передачи, и чтение большим буфером не завершается, пока буфер не наполнится (ответы — через ~30 с).
      */
-    private void readLoop(LinkSession s) {
+    private void readLoop(LinkSession s, InputStream i) {
         byte[] buf = new byte[OldPackets.BLOCK];
         try {
-            while (connected) {
-                int n = in.read(buf, 0, OldPackets.BLOCK);
+            while (connected && s == session) {
+                int n = i.read(buf, 0, OldPackets.BLOCK);
                 if (n < 0) {
-                    disconnect("ГУ закрыло канал");
+                    close("ГУ закрыло канал", s, true);
                     return;
                 }
                 s.onBytes(buf, n);
             }
         } catch (IOException e) {
-            disconnect("кабель отключён (" + e.getMessage() + ")");
+            close("кабель отключён (" + e.getMessage() + ")", s, true);
         } catch (Throwable t) {
             EventLog.error("разбор данных от ГУ", t);
-            disconnect("сбой разбора");
+            close("сбой разбора", s, true);
         }
     }
 
     /** Пишет отдельный поток: поток чтения никогда не ждёт записи (иначе обе стороны зависают). */
-    private void writeLoop(OutputStream o) {
+    private void writeLoop(LinkSession s, OutputStream o) {
         try {
-            while (connected) {
+            while (connected && s == session) {
                 byte[] p = outQueue.poll(500, TimeUnit.MILLISECONDS);
                 if (p != null) {
                     o.write(p);
                 }
             }
         } catch (IOException e) {
-            disconnect("ошибка записи: " + e.getMessage());
+            close("ошибка записи: " + e.getMessage(), s, true);
         } catch (InterruptedException ignored) {
         }
     }
