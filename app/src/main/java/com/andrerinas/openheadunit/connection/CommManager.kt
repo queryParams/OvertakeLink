@@ -935,12 +935,14 @@ class CommManager(
                 if (_connection !== conn || (shook && _transport !== transport)) return@withContext
                 if (shook) {
                     val live = withLiveTransport(transport, ConnectionState.StartingTransport) {
-                        // A session that got this far had a working link to carry video on. See
-                        // VideoStarvationPolicy for what it means when one ends without carrying any.
                         usbRecoveryOwner = Any()
                         usbSaveOwner = null
-                        sessionReachedHandshake = true
-                        videoDecoder.framesRenderedThisSession = 0L
+                        // OvertakeLink: сеанс в VideoStarvationPolicy не засчитывается — AA и приёмник на одном
+                        // телефоне (127.0.0.1), канала, который «не тянет видео», между ними нет, а в прямом режиме
+                        // кадры идут мимо декодера, и счёт видел бы пустые сеансы. Потолок и предупреждение,
+                        // поставленные так прошлыми версиями, снимаются.
+                        settings.videoProfileStarvationCap = false
+                        ConnectionIssues.clear(context, ConnectionIssue.VIDEO_LINK_TOO_SLOW)
                         silentPeerFailures = 0
                         // The peer answered, which is what the deaf-server record claims it cannot.
                         ConnectionIssues.clear(context, ConnectionIssue.HEADUNIT_SERVER_NOT_ANSWERING)

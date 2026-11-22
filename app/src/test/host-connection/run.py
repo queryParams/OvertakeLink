@@ -211,7 +211,7 @@ object AppLog {
  fun i(s:String){hook?.invoke(s)};fun e(s:String){};fun e(s:String,e:Throwable){};fun w(s:String){}
 }
 class Settings{
- var useAacAudio=false;var killOnDisconnect=false;var useLibusb=false
+ var useAacAudio=false;var killOnDisconnect=false;var useLibusb=false;var videoProfileStarvationCap=false
  fun saveLastConnection(type:Int,ip:String="",usbDevice:String=""){}
  companion object{const val CONNECTION_TYPE_WIFI=1;const val CONNECTION_TYPE_USB=2}
 }
@@ -253,7 +253,7 @@ object LegacyOptimizer{fun setHighPriority(){}}
 object HeadUnitScreenConfig{fun unlockResolution(){}}
 object BluetoothHelper{fun isA2dpMediaLinkActive(c:Context)=false}
 object PlaybackFocusPolicy{fun shouldAcquirePermanent(mode:Int,staticAudioFocus:Boolean,audioSinkEnabled:Boolean,btMediaLinkActive:Boolean)=false}
-object ConnectionIssue{const val HEADUNIT_SERVER_NOT_ANSWERING=0}
+object ConnectionIssue{const val HEADUNIT_SERVER_NOT_ANSWERING=0;const val VIDEO_LINK_TOO_SLOW=1}
 object ConnectionIssues{fun clear(c:Context,issue:Int){}}
 object ConnectionStageTracker{fun endAttempt(){};fun clear(){};val stage=MutableStateFlow(ConnectionStage.NONE)}
 object ConnectionStage{const val NONE=0;const val USB_ATTACHED=1;const val USB_SWITCHING=2}
