@@ -11,7 +11,7 @@ import java.io.IOException;
  */
 public final class GapProtocol {
     public static final int PORT = 47621;
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     /** GAP → OL: версия (u16), ширина и высота экрана для AA (u16, u16). */
     public static final int HELLO = 1;
@@ -27,6 +27,13 @@ public final class GapProtocol {
     public static final int STATUS = 6;
     /** OL → GAP: кадр AA и поля интерфейса: ширина, высота, поле по ширине, поле по высоте (u16 × 4). */
     public static final int GEOMETRY = 7;
+    /**
+     * GAP → OL, с версии 2: сколько пакетов видео GAP забрал в декодер или выбросил (u16). Больше {@link #VIDEO_WINDOW}
+     * неподтверждённых OL не шлёт: ждёт, и Android Auto на телефоне притормаживает сам.
+     */
+    public static final int ACK = 8;
+    /** Неподтверждённых пакетов видео в пути, не больше. */
+    public static final int VIDEO_WINDOW = 8;
 
     public static final int VIDEO_CONFIG = 1;
     public static final int VIDEO_KEY = 2;
@@ -63,7 +70,7 @@ public final class GapProtocol {
         if (type == STATUS && len > MAX_STATUS) {
             throw new IOException("состояние длиной " + len);
         }
-        int min = type == HELLO ? 6 : type == TOUCH ? 5 : type == VIDEO ? 1 : type == GEOMETRY ? 8 : 0;
+        int min = type == HELLO ? 6 : type == TOUCH ? 5 : type == VIDEO ? 1 : type == GEOMETRY ? 8 : type == ACK ? 2 : 0;
         if (len < min) {
             // Обрезанный пакет известного типа — поток испорчен: соединение закрывается, процесс не падает.
             throw new IOException("пакет " + type + " короче " + min + " байт: " + len);

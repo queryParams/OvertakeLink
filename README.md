@@ -158,7 +158,8 @@ for charging). The phone shares its hotspot, the head unit joins it, and GAP Sma
 the phone — on TCP port 47621. OvertakeLink starts Android Auto in direct mode (1080p, 720p or 480p from “Picture
 quality in GAP Smart Tool”) for the screen area GAP Smart Tool reports (1724×640 on the Atlas Pro): AA draws its
 interface in that shape with margins around it, H.264 goes over as is, touches come back. After a phone restart, open
-OvertakeLink once; after “Stop”, tap “Turn on”.
+OvertakeLink once; after “Stop”, tap “Turn on”. Needs GAP Smart Tool 2.1.0 or newer: it acknowledges every frame, so
+when Wi-Fi stalls, Android Auto on the phone slows down by itself and the picture does not flicker.
 Protocol: `gap/GapProtocol.java` (a copy lives in GAP Smart Tool).
 
 ## Building

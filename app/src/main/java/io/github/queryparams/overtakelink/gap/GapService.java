@@ -61,11 +61,10 @@ public final class GapService extends Service {
 
     private static final String CHANNEL = "overtakelink";
     private static final int NOTIFICATION_ID = 7;
-    /** Видео впереди, чем успевает Wi-Fi: дальше обычные кадры выбрасываются до следующего ключевого. */
-    private static final int QUEUE_SOFT = 30;
-    private static final int QUEUE_HARD = 120;
-    /** Больше в очереди не держим вовсе: ГУ не забирает данные — соединение рвётся. */
-    private static final int QUEUE_MAX = QUEUE_HARD + 30;
+    /** Больше в очереди не держим вовсе: ГУ не забирает данные — соединение рвётся. Видео в ней — не больше окна. */
+    private static final int QUEUE_MAX = GapProtocol.VIDEO_WINDOW + 30;
+    /** Ожидание подтверждения дольше этого — заминка Wi-Fi, считаем для журнала (мс). */
+    private static final long STALL_MS = 200;
     /** Касаний в секунду больше этого живой палец не даёт: поток мусора — соединение рвётся. */
     private static final int TOUCH_PER_SEC = 250;
 
@@ -335,7 +334,14 @@ public final class GapService extends Service {
         private final DataOutputStream out;
         private final LinkedBlockingQueue<Object[]> q = new LinkedBlockingQueue<>();
         private volatile boolean open = true;
+        /** До первого ключевого кадра обычные кадры не шлём: декодеру GAP не с чего начать. */
         private volatile boolean waitKey = true;
+        /** Пакеты видео, ушедшие в GAP без подтверждения; под {@link #window}. */
+        private int inFlight;
+        private final Object window = new Object();
+        /** Заминки (ждали подтверждения дольше STALL_MS) за минуту и самая долгая — для журнала; под window. */
+        private int stalls;
+        private long longestStall;
         private volatile long lastIn = System.currentTimeMillis();
         /** Что ушло в GAP последним; проверка и отправка — под {@link #geometryLock}: тик и поток видео. */
         private int[] sentGeometry;
@@ -354,11 +360,9 @@ public final class GapService extends Service {
             new Thread(this::tickLoop, "ol-gap-tick").start();
         }
 
-        void send(int type, byte[] data) {
-            // Сверх QUEUE_MAX не копим: тик увидит переполнение и закроет соединение.
-            if (open && q.size() < QUEUE_MAX) {
-                q.offer(new Object[]{type, data});
-            }
+        /** Сверх QUEUE_MAX не копим: тик увидит переполнение и закроет соединение. false — пакет не принят. */
+        boolean send(int type, byte[] data) {
+            return open && q.size() < QUEUE_MAX && q.offer(new Object[]{type, data});
         }
 
         /** Геометрия кадра AA — в GAP, если изменилась с прошлой отправки. */
@@ -376,20 +380,16 @@ public final class GapService extends Service {
             }
         }
 
+        /**
+         * Поток видео AA. Окно GAP занято — ждём подтверждения: пока ждём, OL не подтверждает кадр Android Auto, и тот
+         * сам притормаживает при заминке Wi-Fi (как с беспроводной машиной) — кадры не копятся и не выбрасываются.
+         */
         void video(byte[] data, int off, int len, boolean key) {
-            if (!open) {
-                return;
-            }
             boolean config = len > 4 && (data[off + 4] & 31) == 7;
-            if (q.size() > QUEUE_HARD || (q.size() > QUEUE_SOFT && !key && !config)) {
-                if (!waitKey) {
-                    EventLog.add("GAP Smart Tool: Wi-Fi не успевает — пропускаем кадры до ключевого");
-                }
-                waitKey = true;
-                DirectProjection.requestKeyFrame();
+            if (waitKey && !key && !config) {
                 return;
             }
-            if (waitKey && !key && !config) {
+            if (!awaitWindow()) {
                 return;
             }
             if (key) {
@@ -403,7 +403,60 @@ public final class GapService extends Service {
             byte[] p = new byte[len + 1];
             p[0] = (byte) ((config ? GapProtocol.VIDEO_CONFIG : 0) | (key ? GapProtocol.VIDEO_KEY : 0));
             System.arraycopy(data, off, p, 1, len);
-            send(GapProtocol.VIDEO, p);
+            synchronized (window) {
+                if (send(GapProtocol.VIDEO, p)) {
+                    inFlight++;
+                }
+            }
+        }
+
+        /** Ждать места в окне; false — подключение закрыто (или GAP не подтверждает кадры — тогда рвём его). */
+        private boolean awaitWindow() {
+            long start = 0;
+            synchronized (window) {
+                while (open && inFlight >= GapProtocol.VIDEO_WINDOW) {
+                    long now = android.os.SystemClock.elapsedRealtime();
+                    if (start == 0) {
+                        start = now;
+                    } else if (now - start > GapProtocol.SILENCE_MS) {
+                        break;
+                    }
+                    try {
+                        window.wait(500);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return false;
+                    }
+                }
+                if (start != 0) {
+                    long waited = android.os.SystemClock.elapsedRealtime() - start;
+                    if (waited >= STALL_MS) {
+                        stalls++;
+                        longestStall = Math.max(longestStall, waited);
+                    }
+                }
+                if (open && inFlight < GapProtocol.VIDEO_WINDOW) {
+                    return true;
+                }
+            }
+            if (open) {
+                // Только сокет: поток видео держит замок отправки DirectProjection, а close() берёт lock — с новым hello()
+                // (lock, затем замок отправки) это взаимоблокировка. Подключение закроет поток чтения.
+                EventLog.add("GAP Smart Tool: кадры не подтверждаются " + GapProtocol.SILENCE_MS / 1000 + " с — переподключаемся");
+                try {
+                    sock.close();
+                } catch (IOException ignored) {
+                }
+            }
+            return false;
+        }
+
+        private void acked(int n) {
+            synchronized (window) {
+                // Лишнее подтверждение (из прошлого подключения GAP) окно не расширяет.
+                inFlight = Math.max(0, inFlight - n);
+                window.notifyAll();
+            }
         }
 
         private void readLoop() {
@@ -429,6 +482,9 @@ public final class GapService extends Service {
                             int a = p.data[0];
                             DirectProjection.touch(a == 0 ? MotionEvent.ACTION_DOWN : a == 1 ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE,
                                     p.u16(1), p.u16(3));
+                            break;
+                        case GapProtocol.ACK:
+                            acked(p.u16(0));
                             break;
                         case GapProtocol.KEYFRAME:
                             // Обычные кадры не останавливаем: пока ждёт ключевой, GAP отбрасывает их сам, а запоздавший
@@ -476,6 +532,7 @@ public final class GapService extends Service {
                     return;
                 }
                 send(GapProtocol.PING, new byte[0]);
+                logStalls();
                 // Проверка «это текущий клиент после своего HELLO» и действия с общим AA — одним куском под замком:
                 // закрытие или замена клиента между ними не дадут старому тику поднять AA или переписать состояние.
                 synchronized (lock) {
@@ -484,6 +541,29 @@ public final class GapService extends Service {
                     }
                     tick();
                 }
+            }
+        }
+
+        private long stallsLoggedAt = android.os.SystemClock.elapsedRealtime();
+
+        /** Раз в минуту — сколько раз Android Auto ждал Wi-Fi (тик). */
+        private void logStalls() {
+            long now = android.os.SystemClock.elapsedRealtime();
+            if (now - stallsLoggedAt < 60_000) {
+                return;
+            }
+            stallsLoggedAt = now;
+            int n;
+            long longest;
+            synchronized (window) {
+                n = stalls;
+                longest = longestStall;
+                stalls = 0;
+                longestStall = 0;
+            }
+            if (n > 0) {
+                EventLog.add("GAP Smart Tool: за минуту Wi-Fi притормаживал " + n + " раз, до " + longest
+                        + " мс — Android Auto ждал");
             }
         }
 
@@ -533,6 +613,11 @@ public final class GapService extends Service {
             EventLog.add("GAP Smart Tool: протокол " + version + ", экран для Android Auto " + w + "x" + h);
             if (w < 100 || h < 100) {
                 close("неверный размер экрана " + w + "x" + h);
+                return;
+            }
+            if (version < GapProtocol.VERSION) {
+                // Старый GAP кадры не подтверждает — отказ, как любому неверному HELLO.
+                close("протокол " + version + " устарел, нужен " + GapProtocol.VERSION + " — обновите GAP Smart Tool");
                 return;
             }
             synchronized (lock) {
@@ -585,6 +670,9 @@ public final class GapService extends Service {
                 }
                 open = false;
                 EventLog.add("GAP Smart Tool: отключился — " + why);
+                synchronized (window) {
+                    window.notifyAll();
+                }
                 if (client == this) {
                     client = null;
                     clientConnected = false;
