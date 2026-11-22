@@ -17,7 +17,6 @@ public final class NewPackets {
     public static final int TYPE_CMD = 0;
     public static final int TYPE_VIDEO = 1;
     public static final int TYPE_TOUCH = 2;
-    public static final int TYPE_SPEECH = 12;
     public static final int TYPE_APP = 13;
     public static final int TYPE_CUSTOM = 99;
 

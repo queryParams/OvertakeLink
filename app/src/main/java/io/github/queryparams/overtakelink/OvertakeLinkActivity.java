@@ -653,9 +653,6 @@ public final class OvertakeLinkActivity extends Activity {
             q.addView(button(getString(R.string.ol_gap_video_480), OvertakeLinkService.VIDEO_DIRECT_SMALL.equals(g), v -> setGapVideo(OvertakeLinkService.VIDEO_DIRECT_SMALL)));
             q.addView(text(getString(R.string.ol_gap_video_hint), 12, MUTED, false));
             content.addView(q, cardLp());
-            // Микрофон машины — только по кабелю; при выводе в GAP Smart Tool микрофон ГУ слушает его голосовое управление.
-            // Включили до обновления, когда GAP уже был выбран: выключаем и здесь, а не только при выборе вывода.
-            carMicOffForGap();
             return;
         }
         LinearLayout video = card();
@@ -672,18 +669,6 @@ public final class OvertakeLinkActivity extends Activity {
                 v -> setVideoMode(OvertakeLinkService.VIDEO_TRANSCODE)));
         video.addView(text(getString(R.string.ol_video_hint), 12, MUTED, false));
         content.addView(video, cardLp());
-
-        LinearLayout lab = card();
-        lab.addView(text(getString(R.string.ol_experiments), 16, TEXT, true));
-        lab.addView(text(getString(R.string.ol_car_mic_note), 13, MUTED, false));
-        boolean carMic = getSharedPreferences("overtakelink", MODE_PRIVATE).getBoolean(OvertakeLinkService.PREF_CAR_MIC, false);
-        lab.addView(button(getString(carMic ? R.string.ol_car_mic_on : R.string.ol_car_mic_off), carMic, v -> {
-            getSharedPreferences("overtakelink", MODE_PRIVATE).edit().putBoolean(OvertakeLinkService.PREF_CAR_MIC, !carMic).apply();
-            EventLog.add("Микрофон машины (тест): " + (carMic ? "выключен" : "включён"));
-            render();
-        }));
-        content.addView(lab, cardLp());
-
     }
 
     /** Вывод выбирается только вручную: в GAP Smart Tool — служба ждёт его по Wi-Fi; по кабелю — служба GAP останавливается. */
@@ -691,7 +676,6 @@ public final class OvertakeLinkActivity extends Activity {
         getSharedPreferences("overtakelink", MODE_PRIVATE).edit().putString(GapService.PREF_OUTPUT, output).apply();
         EventLog.add("Вывод Android Auto: " + (GapService.OUTPUT_GAP.equals(output) ? "в GAP Smart Tool по Wi-Fi" : "по кабелю (QDLink)"));
         if (GapService.OUTPUT_GAP.equals(output)) {
-            carMicOffForGap();
             // Экран и приёмник AA — у одного режима за раз. Останавливаем без оглядки на состояние: кабельное
             // подключение могло ещё открывать аксессуар (состояние пока WAITING) и запустилось бы уже при GAP.
             startService(new Intent(this, OvertakeLinkService.class).setAction(OvertakeLinkService.ACTION_STOP));
@@ -701,14 +685,6 @@ public final class OvertakeLinkActivity extends Activity {
             startService(new Intent(this, GapService.class).setAction(GapService.ACTION_STOP));
         }
         render();
-    }
-
-    /** Микрофон ГУ нужен голосовому управлению GAP Smart Tool: тест микрофона машины выключаем, а не прячем включённым. */
-    private void carMicOffForGap() {
-        if (getSharedPreferences("overtakelink", MODE_PRIVATE).getBoolean(OvertakeLinkService.PREF_CAR_MIC, false)) {
-            getSharedPreferences("overtakelink", MODE_PRIVATE).edit().putBoolean(OvertakeLinkService.PREF_CAR_MIC, false).apply();
-            EventLog.add("Микрофон машины (тест): выключен — выбран вывод в GAP Smart Tool");
-        }
     }
 
     private void setGapVideo(String mode) {

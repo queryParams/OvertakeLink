@@ -29,8 +29,6 @@ public final class LinkSession {
 
         void caption(String text);
 
-        void micData(byte[] b, int off, int len);
-
         ScreenGeometry geometry(int carWidth, int carHeight);
 
         /** ГУ сообщило размер экрана: можно заранее поднять экран машины и Android Auto. */
@@ -104,16 +102,6 @@ public final class LinkSession {
     /** ГУ разрешило видео (команда play) и ещё не остановило его. */
     public synchronized boolean videoPlaying() {
         return videoRunning;
-    }
-
-    /** Микрофон ГУ: при включении ГУ шлёт его звук пакетами dataType 12 (приходят в {@link Host#micData}). */
-    public synchronized void speech(boolean on) {
-        if (proto == Proto.NEW) {
-            sendCmd("SPEECH_CTRL", put(new JSONObject(), "SpeechStatus", on ? 1 : 0));
-            return;
-        }
-        EventLog.add("→ ГУ: микрофон машины " + (on ? "включить" : "выключить") + " (!BIN cmd 21, value " + (on ? 1 : 0) + ")");
-        host.send(OldPackets.speechControl(on));
     }
 
     /** Размер кадра для заголовков видеопакетов, если поток не того размера, что экран машины. */
@@ -282,15 +270,6 @@ public final class LinkSession {
                 host.touch(touchAction, x, y);
                 return;
             }
-            case OldPackets.DT_SPEECH:
-                if (total > OldPackets.BLOCK) {
-                    int size = OldPackets.i32(b, off + 288);
-                    int n = size > 0 && size <= total - OldPackets.BLOCK ? size : total - OldPackets.BLOCK;
-                    host.micData(b, off + OldPackets.BLOCK, n);
-                } else {
-                    logUnknown("!BIN речь без данных", b, off, total);
-                }
-                return;
             case OldPackets.DT_HU_MSG:
                 onOldAppPacket(b, off, total, action);
                 return;
@@ -497,9 +476,6 @@ public final class LinkSession {
                 return;
             case NewPackets.TYPE_TOUCH:
                 onTouch(b, bodyOff, bodyLen);
-                return;
-            case NewPackets.TYPE_SPEECH:
-                host.micData(b, bodyOff, bodyLen);
                 return;
             default:
                 logUnknown("5A5A тип " + msgType + ", формат " + fmt + ", резерв " + reserved, b, off, total);
