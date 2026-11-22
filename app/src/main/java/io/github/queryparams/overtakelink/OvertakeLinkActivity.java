@@ -704,11 +704,7 @@ public final class OvertakeLinkActivity extends Activity {
     private void renderLog() {
         LinearLayout card = card();
         card.addView(text(getString(R.string.ol_tab_log), 16, TEXT, true));
-        logView = text(EventLog.tail(300), 11, 0xFFC3C9D1, false);
-        logView.setTypeface(Typeface.MONOSPACE);
-        logView.setTextIsSelectable(true);
-        logVersion = EventLog.version();
-        card.addView(logView);
+        // Кнопки — над журналом: до них не листать 300 строк.
         LinearLayout r = row();
         r.addView(button(getString(R.string.ol_save_log), false, v -> new Thread(() -> {
             // Чтение и запись всего журнала — не на главном потоке; результат — плашкой.
@@ -728,6 +724,11 @@ public final class OvertakeLinkActivity extends Activity {
         }, "ol-log-wipe").start()),
                 new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         card.addView(r);
+        logView = text(EventLog.tail(300), 11, 0xFFC3C9D1, false);
+        logView.setTypeface(Typeface.MONOSPACE);
+        logView.setTextIsSelectable(true);
+        logVersion = EventLog.version();
+        card.addView(logView);
         content.addView(card, cardLp());
     }
 
