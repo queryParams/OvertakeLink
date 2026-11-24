@@ -38,11 +38,13 @@ maps, music, calls, the Assistant — with touch control.
    - cable and default app — as in step 4 below;
    - Bluetooth: the phone must be connected to the car, as for music.
 4. **Connect the phone to the car’s USB port with a cable.** Android will ask which app should open
-   “QDriveLink” (on some cars “AndroidLink”) — choose OvertakeLink and tick “Always”. It’s best to uninstall the stock QDLink app.
-5. The first time, Android Auto will ask you on the phone to accept its terms and allow
+   “QDriveLink” (on some cars “AndroidLink”) — choose OvertakeLink and tick “Always”. It’s best to uninstall the stock QDLink app from the phone.
+5. **Open the QDLink app on the head unit** — Android Auto is shown in it. OvertakeLink does not mirror the phone
+   screen: the head unit shows Android Auto running on the phone.
+6. The first time, Android Auto will ask you on the phone to accept its terms and allow
    notification access — do it while parked.
 
-After that everything works by itself: get in, plug in the cable — Android Auto is on the car screen.
+After that it’s simple: get in, plug in the cable, open QDLink on the head unit — Android Auto is on the car screen.
 
 **Steering wheel buttons.** The car sends “next / previous” to whichever audio source is selected
 on the head unit: they switch tracks only while the head unit’s stock Bluetooth player is open. The
