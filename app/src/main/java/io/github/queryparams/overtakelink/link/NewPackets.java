@@ -2,6 +2,10 @@ package io.github.queryparams.overtakelink.link;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+import io.github.queryparams.overtakelink.car.TouchPointers;
 
 /**
  * Новый протокол QDLink («5A5A», big-endian), по родному QDLink 1.9.7 (классы h0.a, h0.d, linkconnection.a).
@@ -81,5 +85,48 @@ public final class NewPackets {
         b.position(HEADER + VIDEO_EXT);
         b.put(data, off, len);
         return b.array();
+    }
+
+    /**
+     * Касание (тип 2, класс h0.e): int action, byte число пальцев, на палец — byte номер, byte действие (1 нажатие,
+     * 2 отпускание, 3 движение), float x, float y. Родной QDLink берёт только палец 0, мы — все. Все пальцы пакета —
+     * один момент: сначала одно движение со всеми, затем нажатия и отпускания по порядку, каждое — с местом всех
+     * пальцев. null — пакет испорчен (короткий, обрезанный, неизвестное действие, координата не число): его не
+     * применяют даже частично.
+     */
+    public static List<TouchPointers.Frame> touchFrames(byte[] b, int off, int len) {
+        int count = len >= 5 ? b[off + 4] & 0xff : -1;
+        if (count < 0 || len - 5 < count * 10) {
+            return null;
+        }
+        ByteBuffer bb = ByteBuffer.wrap(b, off + 5, len - 5);
+        List<TouchPointers.Pointer> all = new ArrayList<>(count);
+        // Нажатия и отпускания: [номер, действие] — кадры из них собираются, когда известны места всех пальцев.
+        List<int[]> changes = new ArrayList<>();
+        boolean moved = false;
+        for (int i = 0; i < count; i++) {
+            int id = bb.get() & 0xff;
+            int fingerAction = bb.get();
+            float x = bb.getFloat();
+            float y = bb.getFloat();
+            if (fingerAction < 1 || fingerAction > 3 || !Float.isFinite(x) || !Float.isFinite(y)) {
+                return null;
+            }
+            all.add(new TouchPointers.Pointer(id, x, y));
+            // Действия кадра — как в MotionEvent: 0 нажатие, 1 отпускание, 2 движение.
+            if (fingerAction == 3) {
+                moved = true;
+            } else {
+                changes.add(new int[]{id, fingerAction == 1 ? 0 : 1});
+            }
+        }
+        List<TouchPointers.Frame> out = new ArrayList<>(changes.size() + 1);
+        if (moved) {
+            out.add(new TouchPointers.Frame(2, 0, all));
+        }
+        for (int[] c : changes) {
+            out.add(new TouchPointers.Frame(c[1], c[0], all));
+        }
+        return out;
     }
 }

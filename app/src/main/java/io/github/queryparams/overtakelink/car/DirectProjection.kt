@@ -52,7 +52,8 @@ object DirectProjection {
     @Volatile private var framesAtTransport = 0L
     @Volatile private var closed = false
     private var wasProjecting = false
-    private var downTime = 0L
+    /** Пальцы, о которых знает сеанс AA: касания приходят из одного потока чтения (USB или GAP), блокировка — на смену потока. */
+    private val pointers = TouchPointers()
     /** Заставки по тексту и размеру кадра: смена прямого режима (1080p → 480p) — другая заставка. */
     private val splashes = HashMap<String, Frame>()
     /** Отправка кадров AA и заставки — по очереди: заставка не вклинивается в уже идущий поток AA. */
@@ -108,6 +109,8 @@ object DirectProjection {
     /** fit — из {@link #fit}: экран width×height уже уменьшен, плотность — во столько же раз (интерфейс AA того же размера). */
     @JvmStatic
     fun start(context: Context, width: Int, height: Int, size: Size, sink: Sink, fitScreen: Boolean, fit: Float) {
+        // Новый показ — новый учёт пальцев: прежнего показа AA не знает.
+        synchronized(pointers) { pointers.reset() }
         val app = App.provide(context)
         this.context = context.applicationContext
         val gen: Int
@@ -154,6 +157,7 @@ object DirectProjection {
 
     @JvmStatic
     fun stop() {
+        synchronized(pointers) { pointers.reset() }
         val ctx = context ?: return
         App.provide(ctx).videoDecoder.passthrough = null
         scope?.cancel()
@@ -442,14 +446,17 @@ object DirectProjection {
     private fun frameHeight(): Int = HeadUnitScreenConfig.getNegotiatedHeight()
 
     /**
-     * Касание с экрана ГУ (поток чтения USB). ГУ присылает его уже в координатах кадра: пересчитывает
-     * пиксели экрана в размер из заголовка видеопакета (libhmi_for_hclink, coordinate_transformation).
+     * Кадр касаний с экрана ГУ (поток чтения USB или GAP). ГУ присылает его уже в координатах кадра: пересчитывает
+     * пиксели экрана в размер из заголовка видеопакета (libhmi_for_hclink, coordinate_transformation). Учёт пальцев —
+     * то, что знает идущий сеанс AA: учёт живёт в пределах показа (start/stop его сбрасывают), а пока AA не
+     * готов, пуст — палец, нажатый до начала показа, AA не достанется отпусканием без нажатия.
      */
     @JvmStatic
-    fun touch(action: Int, x: Float, y: Float) {
+    fun touch(f: TouchPointers.Frame) {
         val ctx = context ?: return
         if (closed) {
-            if (action == MotionEvent.ACTION_UP) {
+            synchronized(pointers) { pointers.reset() }
+            if (f.action == MotionEvent.ACTION_UP) {
                 closed = false
                 EventLog.add("Экран машины: касание — открываем Android Auto снова")
                 showSplash(text(R.string.ol_car_starting))
@@ -458,17 +465,18 @@ object DirectProjection {
             return
         }
         val comm = App.provide(ctx).commManager
-        if (comm.connectionState.value !is CommManager.ConnectionState.TransportStarted || carWidth <= 0) return
-        val now = SystemClock.uptimeMillis()
-        if (action == MotionEvent.ACTION_DOWN) downTime = now
-        val ev = MotionEvent.obtain(downTime, now, action, x, y, 0)
-        try {
-            val aaAction = TouchEvent.motionEventToAction(ev) ?: return
-            val ax = x.toInt().coerceIn(0, frameWidth() - 1)
-            val ay = y.toInt().coerceIn(0, frameHeight() - 1)
-            comm.send(TouchEvent(SystemClock.elapsedRealtime(), aaAction, 0, listOf(Triple(0, ax, ay))))
-        } finally {
-            ev.recycle()
+        val w = frameWidth() - 1
+        val h = frameHeight() - 1
+        val events = synchronized(pointers) {
+            if (comm.connectionState.value !is CommManager.ConnectionState.TransportStarted || carWidth <= 0 || w < 0 || h < 0) {
+                pointers.reset()
+                return
+            }
+            pointers.apply(f)
+        }
+        for (e in events) {
+            comm.send(TouchEvent(SystemClock.elapsedRealtime(), e.action, e.actionIndex,
+                e.pointers.map { Triple(it.id, it.x.toInt().coerceIn(0, w), it.y.toInt().coerceIn(0, h)) }))
         }
     }
 

@@ -4,8 +4,11 @@ import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import io.github.queryparams.overtakelink.car.TouchPointers;
 
 /**
  * Протокол QDLink без Android: разбор входящего потока, ответы ГУ, упаковка видео.
@@ -24,8 +27,8 @@ public final class LinkSession {
 
         void requestKeyFrame();
 
-        /** action — как в MotionEvent: 0 нажатие, 1 отпускание, 2 движение; x, y — пиксели экрана машины. */
-        void touch(int action, float x, float y);
+        /** Кадр касаний; координаты — пиксели экрана машины. */
+        void touch(TouchPointers.Frame frame);
 
         void caption(String text);
 
@@ -264,10 +267,14 @@ public final class LinkSession {
                 short y = OldPackets.i16(b, off + 70);
                 // По записи сеанса: 0x8000 — нажатие, 0x8001 — движение, 0x8002 — отпускание.
                 int touchAction = act == Short.MIN_VALUE ? 0 : act == Short.MIN_VALUE + 1 ? 2 : 1;
+                // Номер пальца (libSSP_Main fillTouchEventMsg): флаг 1 на +72 и u16 на +74 — getPointerId касания
+                // на экране ГУ; каждый палец — свой пакет. Нет флага — один палец, как раньше.
+                int id = total >= 76 && b[off + 72] == 1 ? OldPackets.i16(b, off + 74) & 0xffff : 0;
                 if (touchAction != 2) {
-                    EventLog.add("← ГУ: касание " + (touchAction == 0 ? "нажатие" : "отпускание") + " x " + x + ", y " + y);
+                    EventLog.add("← ГУ: касание " + (touchAction == 0 ? "нажатие" : "отпускание")
+                            + (id != 0 ? ", палец " + id : "") + " x " + x + ", y " + y);
                 }
-                host.touch(touchAction, x, y);
+                host.touch(TouchPointers.finger(id, touchAction, x, y));
                 return;
             }
             case OldPackets.DT_HU_MSG:
@@ -464,6 +471,10 @@ public final class LinkSession {
         int bodyLen = total - NewPackets.HEADER - ext;
         if (bodyLen < 0) {
             logUnknown("5A5A: доп. заголовок длиннее пакета", b, off, total);
+            // Испорченное касание — отмена жеста, как любой испорченный кадр касаний.
+            if (msgType == NewPackets.TYPE_TOUCH) {
+                badTouch(b, off, total);
+            }
             return;
         }
         switch (msgType) {
@@ -620,33 +631,25 @@ public final class LinkSession {
         host.scheduleRepeating(1000, 1000, () -> host.send(packet));
     }
 
-    /**
-     * Касание (тип 2, класс h0.e): int action, byte число пальцев, на палец — byte номер, byte действие
-     * (1 нажатие, 2 отпускание, 3 движение), float x, float y. Родной QDLink берёт только палец 0.
-     */
+    /** Касание (тип 2): кадры по порядку; испорченный пакет — отмена жеста (см. {@link NewPackets#touchFrames}). */
     private void onTouch(byte[] b, int off, int len) {
-        if (len < 5) {
-            EventLog.add("← ГУ: короткое касание: " + EventLog.hex(b, off, len, 64));
+        List<TouchPointers.Frame> frames = NewPackets.touchFrames(b, off, len);
+        if (frames == null) {
+            badTouch(b, off, len);
             return;
         }
-        ByteBuffer bb = ByteBuffer.wrap(b, off, len);
-        bb.getInt();
-        int count = bb.get() & 0xff;
-        for (int i = 0; i < count && bb.remaining() >= 10; i++) {
-            int id = bb.get();
-            int fingerAction = bb.get();
-            float x = bb.getFloat();
-            float y = bb.getFloat();
-            if (id != 0) {
-                continue;
+        for (TouchPointers.Frame f : frames) {
+            if (f.getAction() != 2) {
+                EventLog.add("← ГУ: касание " + (f.getAction() == 0 ? "нажатие" : "отпускание")
+                        + (f.getId() != 0 ? ", палец " + f.getId() : "") + ", пальцев на экране " + f.getPointers().size());
             }
-            int action = fingerAction == 2 ? 1 : fingerAction == 3 ? 2 : 0;
-            if (action != 2) {
-                EventLog.add(String.format(Locale.US, "← ГУ: касание %s x %.0f, y %.0f",
-                        action == 0 ? "нажатие" : "отпускание", x, y));
-            }
-            host.touch(action, x, y);
+            host.touch(f);
         }
+    }
+
+    private void badTouch(byte[] b, int off, int len) {
+        EventLog.add("← ГУ: испорченное касание — жест отменён: " + EventLog.hex(b, off, len, 64));
+        host.touch(new TouchPointers.Frame(3, 0, new ArrayList<>())); // 3 — отмена, как в MotionEvent
     }
 
     private void sendCmd(String cmd, JSONObject para) {

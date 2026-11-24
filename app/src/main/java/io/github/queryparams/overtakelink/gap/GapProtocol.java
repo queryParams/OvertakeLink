@@ -3,6 +3,10 @@ package io.github.queryparams.overtakelink.gap;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import io.github.queryparams.overtakelink.car.TouchPointers;
 
 /**
  * Протокол OvertakeLink ↔ GAP Smart Tool по Wi-Fi. GAP Smart Tool подключается по TCP к шлюзу своей сети — телефону,
@@ -11,13 +15,21 @@ import java.io.IOException;
  */
 public final class GapProtocol {
     public static final int PORT = 47621;
-    public static final int VERSION = 2;
+    /** Версия протокола OL; с 3 — касания несколькими пальцами в {@link #TOUCH}. GAP узнаёт её из {@link #INFO}. */
+    public static final int VERSION = 3;
+    /** GAP старше не берём: без протокола 2 (подтверждение кадров) поток видео не держится. */
+    public static final int MIN_GAP = 2;
 
     /** GAP → OL: версия (u16), ширина и высота экрана для AA (u16, u16). */
     public static final int HELLO = 1;
     /** OL → GAP: флаги (u8: 1 — SPS/PPS, 2 — ключевой кадр), NAL Annex-B. */
     public static final int VIDEO = 2;
-    /** GAP → OL: действие (u8: 0 — нажатие, 1 — отпускание, 2 — движение), x, y в пикселях кадра (u16, u16). */
+    /**
+     * GAP → OL: действие (u8: 0 — нажатие, 1 — отпускание, 2 — движение), x, y в пикселях кадра (u16, u16) — один
+     * палец, ровно 5 байт. С версии 3 (GAP узнал её из {@link #INFO}) — кадр со всеми пальцами: действие (u8: 0 —
+     * нажатие, 1 — отпускание, 2 — движение, 3 — отмена), номер нажатого или отпущенного пальца (u8), число пальцев
+     * (u8, от 1), на палец — номер (u8), x, y (u16, u16): 3 + 5 × n байт, с пятью байтами не путается.
+     */
     public static final int TOUCH = 3;
     /** GAP → OL: нужен ключевой кадр (декодер только что создан). */
     public static final int KEYFRAME = 4;
@@ -32,6 +44,11 @@ public final class GapProtocol {
      * неподтверждённых OL не шлёт: ждёт, и Android Auto на телефоне притормаживает сам.
      */
     public static final int ACK = 8;
+    /**
+     * OL → GAP, с версии 3: версия протокола OL (u16), сразу после принятого HELLO. Старый GAP неизвестный пакет
+     * пропускает и шлёт касания одним пальцем; новый — кадрами со всеми пальцами, только узнав версию 3.
+     */
+    public static final int INFO = 9;
     /** Неподтверждённых пакетов видео в пути, не больше. */
     public static final int VIDEO_WINDOW = 8;
 
@@ -88,6 +105,28 @@ public final class GapProtocol {
             out.write(data, off, len);
             out.flush();
         }
+    }
+
+    /**
+     * Пакет {@link #TOUCH} → кадр касаний, оба формата; действия протокола совпадают с MotionEvent (0 нажатие,
+     * 1 отпускание, 2 движение, 3 отмена). null — пакет испорчен.
+     */
+    public static TouchPointers.Frame touch(Packet p) {
+        byte[] d = p.data;
+        int a = d[0] & 0xff;
+        if (d.length == 5) {
+            return TouchPointers.finger(0, a <= 1 ? a : 2, p.u16(1), p.u16(3));
+        }
+        int n = d[2] & 0xff;
+        if (a > 3 || n == 0 || d.length != 3 + 5 * n) {
+            return null;
+        }
+        List<TouchPointers.Pointer> pointers = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            int at = 3 + 5 * i;
+            pointers.add(new TouchPointers.Pointer(d[at] & 0xff, p.u16(at + 1), p.u16(at + 3)));
+        }
+        return new TouchPointers.Frame(a, d[1] & 0xff, pointers);
     }
 
     public static byte[] u16s(int... v) {

@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import io.github.queryparams.overtakelink.car.CarScreen;
 import io.github.queryparams.overtakelink.car.CarProjection;
 import io.github.queryparams.overtakelink.car.DirectProjection;
+import io.github.queryparams.overtakelink.car.TouchPointers;
 import io.github.queryparams.overtakelink.gap.GapService;
 import io.github.queryparams.overtakelink.link.EventLog;
 import io.github.queryparams.overtakelink.link.LinkSession;
@@ -979,11 +980,11 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
     }
 
     @Override
-    public void touch(int action, float x, float y) {
+    public void touch(TouchPointers.Frame frame) {
         if (direct) {
-            DirectProjection.touch(action, x, y);
+            DirectProjection.touch(frame);
         } else {
-            CarProjection.touch(action, x, y);
+            CarProjection.touch(frame);
         }
     }
 
@@ -1142,12 +1143,12 @@ public final class OvertakeLinkService extends Service implements LinkSession.Ho
         }
 
         @Override
-        public void touch(int action, float x, float y) {
+        public void touch(TouchPointers.Frame frame) {
             // Сразу и по порядку: прямой режим отдаёт касание в AA без очереди, совместимый — в свою упорядоченную
             // очередь со слиянием движений. Через ограниченную очередь команд касания не идут: там они могли
             // потеряться и разорвать жест.
             if (live()) {
-                OvertakeLinkService.this.touch(action, x, y);
+                OvertakeLinkService.this.touch(frame);
             }
         }
 

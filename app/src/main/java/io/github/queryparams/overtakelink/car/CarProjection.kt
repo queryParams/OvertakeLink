@@ -57,7 +57,8 @@ class CarProjection private constructor(context: Context, display: Display) :
     private var closed = false
     private var wasProjecting = false
     private var surfaceSet = false
-    private var downTime = 0L
+    /** Пальцы, о которых знает AA, — только в главном потоке (очередь касаний). */
+    private val pointers = TouchPointers()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -160,10 +161,14 @@ class CarProjection private constructor(context: Context, display: Display) :
         videoDecoder.onFirstFrameListener = { main.post { splash.visibility = android.view.View.GONE } }
     }
 
-    /** Касание с экрана ГУ: action как в MotionEvent, координаты — пиксели экрана машины. */
-    private fun handleTouch(action: Int, x: Float, y: Float) {
+    /**
+     * Кадр касаний с экрана ГУ (главный поток), координаты — пиксели экрана машины. Учёт пальцев — то, что знает
+     * AA: пока экран не готов, учёт пуст, и нажатие до готовности AA не достанется.
+     */
+    private fun handleTouch(f: TouchPointers.Frame) {
         if (closed) {
-            if (action == MotionEvent.ACTION_UP) {
+            pointers.reset()
+            if (f.action == MotionEvent.ACTION_UP) {
                 closed = false
                 showSplash(context.getString(R.string.ol_car_starting))
                 EventLog.add("Экран машины: касание — открываем Android Auto снова")
@@ -173,27 +178,28 @@ class CarProjection private constructor(context: Context, display: Display) :
         }
         val w = HeadUnitScreenConfig.getNegotiatedWidth()
         val h = HeadUnitScreenConfig.getNegotiatedHeight()
-        if (w <= 0 || h <= 0 || view.width <= 0 || view.height <= 0) return
-        val now = SystemClock.uptimeMillis()
-        if (action == MotionEvent.ACTION_DOWN) downTime = now
-        val ev = MotionEvent.obtain(downTime, now, action, x, y, 0)
-        try {
-            val aaAction = TouchEvent.motionEventToAction(ev) ?: return
-            val p = TouchCoordinateMapper.map(
-                rawX = x,
-                rawY = y,
-                inputSurfaceWidth = view.width.toFloat(),
-                inputSurfaceHeight = view.height.toFloat(),
-                negotiatedWidth = w,
-                negotiatedHeight = h,
-                marginWidth = HeadUnitScreenConfig.getWidthMargin().toFloat(),
-                marginHeight = HeadUnitScreenConfig.getHeightMargin().toFloat(),
-                fitMode = app.settings.videoFitMode,
-                hudMirroring = false
-            )
-            commManager.send(TouchEvent(SystemClock.elapsedRealtime(), aaAction, 0, listOf(Triple(0, p.x, p.y))))
-        } finally {
-            ev.recycle()
+        if (w <= 0 || h <= 0 || view.width <= 0 || view.height <= 0 ||
+            commManager.connectionState.value !is CommManager.ConnectionState.TransportStarted) {
+            pointers.reset()
+            return
+        }
+        for (e in pointers.apply(f)) {
+            val mapped = e.pointers.map {
+                val p = TouchCoordinateMapper.map(
+                    rawX = it.x,
+                    rawY = it.y,
+                    inputSurfaceWidth = view.width.toFloat(),
+                    inputSurfaceHeight = view.height.toFloat(),
+                    negotiatedWidth = w,
+                    negotiatedHeight = h,
+                    marginWidth = HeadUnitScreenConfig.getWidthMargin().toFloat(),
+                    marginHeight = HeadUnitScreenConfig.getHeightMargin().toFloat(),
+                    fitMode = app.settings.videoFitMode,
+                    hudMirroring = false
+                )
+                Triple(it.id, p.x, p.y)
+            }
+            commManager.send(TouchEvent(SystemClock.elapsedRealtime(), e.action, e.actionIndex, mapped))
         }
     }
 
@@ -251,57 +257,19 @@ class CarProjection private constructor(context: Context, display: Display) :
             current = null
         }
 
-        /** Касания по порядку для главного потока: подряд идущие движения сливаются, нажатия и отпускания — нет. */
-        private val touches = ArrayDeque<FloatArray>()
-        private var touchesScheduled = false
-        private const val TOUCHES_MAX = 64
+        private val touches = TouchQueue()
         private val redrawPending = java.util.concurrent.atomic.AtomicBoolean(false)
 
-        /**
-         * Касание с экрана ГУ. Порядок DOWN → MOVE → UP сохраняется; подряд идущие движения сливаются в одно с
-         * последними координатами, так что очередь не растёт, если главный поток не успевает. Переполнение (за 64
-         * события) — сначала выпадают движения, границы жеста остаются.
-         */
+        /** Кадр касаний с экрана ГУ — в очередь главного потока (см. [TouchQueue]). */
         @JvmStatic
-        fun touch(action: Int, x: Float, y: Float) {
-            synchronized(touches) {
-                val last = touches.lastOrNull()
-                if (action == MotionEvent.ACTION_MOVE && last != null && last[0].toInt() == MotionEvent.ACTION_MOVE) {
-                    last[1] = x
-                    last[2] = y
-                } else {
-                    if (touches.size >= TOUCHES_MAX) {
-                        val move = touches.indexOfFirst { it[0].toInt() == MotionEvent.ACTION_MOVE }
-                        if (move >= 0) {
-                            touches.removeAt(move)
-                        } else {
-                            // Одни нажатия и отпускания — главный поток сильно отстал. Не терять конец жеста молча:
-                            // всё накопленное отменяется, AA получает отмену (палец не «зависнет»), новое нажатие — заново.
-                            touches.clear()
-                            touches.addLast(floatArrayOf(MotionEvent.ACTION_CANCEL.toFloat(), x, y))
-                            if (action != MotionEvent.ACTION_DOWN) {
-                                if (!touchesScheduled) {
-                                    touchesScheduled = true
-                                    main.post(drainTouches)
-                                }
-                                return
-                            }
-                        }
-                    }
-                    touches.addLast(floatArrayOf(action.toFloat(), x, y))
-                }
-                if (touchesScheduled) return
-                touchesScheduled = true
-            }
-            main.post(drainTouches)
+        fun touch(f: TouchPointers.Frame) {
+            if (touches.offer(f)) main.post(drainTouches)
         }
 
         private val drainTouches = Runnable {
             while (true) {
-                val e = synchronized(touches) {
-                    touches.removeFirstOrNull() ?: run { touchesScheduled = false; null }
-                } ?: break
-                current?.handleTouch(e[0].toInt(), e[1], e[2])
+                val f = touches.poll() ?: break
+                current?.handleTouch(f)
             }
         }
 

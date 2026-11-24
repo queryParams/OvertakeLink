@@ -14,7 +14,6 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.view.MotionEvent;
 
 import com.andrerinas.openheadunit.App;
 import com.andrerinas.openheadunit.R;
@@ -40,6 +39,7 @@ import io.github.queryparams.overtakelink.OvertakeLinkActivity;
 import io.github.queryparams.overtakelink.OvertakeLinkService;
 import io.github.queryparams.overtakelink.car.CarScreen;
 import io.github.queryparams.overtakelink.car.DirectProjection;
+import io.github.queryparams.overtakelink.car.TouchPointers;
 import io.github.queryparams.overtakelink.link.EventLog;
 
 /**
@@ -479,9 +479,19 @@ public final class GapService extends Service {
                                 close("слишком много касаний — поток испорчен");
                                 return;
                             }
-                            int a = p.data[0];
-                            DirectProjection.touch(a == 0 ? MotionEvent.ACTION_DOWN : a == 1 ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE,
-                                    p.u16(1), p.u16(3));
+                            TouchPointers.Frame f = GapProtocol.touch(p);
+                            if (f == null) {
+                                close("испорченное касание");
+                                return;
+                            }
+                            // Касания — только от текущего клиента: заменённый мог дочитать пакет уже в новый показ.
+                            // Под замком до конца передачи: новый показ не начнётся между проверкой и касанием.
+                            synchronized (lock) {
+                                if (client != this || !open) {
+                                    return;
+                                }
+                                DirectProjection.touch(f);
+                            }
                             break;
                         case GapProtocol.ACK:
                             acked(p.u16(0));
@@ -615,9 +625,9 @@ public final class GapService extends Service {
                 close("неверный размер экрана " + w + "x" + h);
                 return;
             }
-            if (version < GapProtocol.VERSION) {
+            if (version < GapProtocol.MIN_GAP) {
                 // Старый GAP кадры не подтверждает — отказ, как любому неверному HELLO.
-                close("протокол " + version + " устарел, нужен " + GapProtocol.VERSION + " — обновите GAP Smart Tool");
+                close("протокол " + version + " устарел, нужен " + GapProtocol.MIN_GAP + " — обновите GAP Smart Tool");
                 return;
             }
             synchronized (lock) {
@@ -648,6 +658,8 @@ public final class GapService extends Service {
                 screen = sc;
                 clientConnected = true;
                 wakeLock.acquire();
+                // Своя версия — раньше видео: GAP выберет формат касаний до первого кадра, а не посреди жеста.
+                send(GapProtocol.INFO, GapProtocol.u16s(GapProtocol.VERSION));
                 DirectProjection.start(GapService.this, sw, sh, size, this::video, true, fit);
                 hello = true;
                 keyAsked = false;
