@@ -126,4 +126,13 @@ public final class OldPackets {
         System.arraycopy(data, off, out, BLOCK, len);
         return out;
     }
+
+    /**
+     * Номер пальца в касании ГУ (libSSP_Main fillTouchEventMsg): флаг 1 — u16 на +72 (старший байт первым, как всё в
+     * пакете: в машине «00 01»), номер — u16 на +74, getPointerId касания на экране ГУ; каждый палец — свой пакет.
+     * Нет флага (старые ГУ, короткий пакет) — 0: один палец, как раньше.
+     */
+    static int touchFinger(byte[] b, int off, int total) {
+        return total >= 76 && i16(b, off + 72) == 1 ? i16(b, off + 74) & 0xffff : 0;
+    }
 }

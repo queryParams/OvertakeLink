@@ -267,9 +267,7 @@ public final class LinkSession {
                 short y = OldPackets.i16(b, off + 70);
                 // По записи сеанса: 0x8000 — нажатие, 0x8001 — движение, 0x8002 — отпускание.
                 int touchAction = act == Short.MIN_VALUE ? 0 : act == Short.MIN_VALUE + 1 ? 2 : 1;
-                // Номер пальца (libSSP_Main fillTouchEventMsg): флаг 1 на +72 и u16 на +74 — getPointerId касания
-                // на экране ГУ; каждый палец — свой пакет. Нет флага — один палец, как раньше.
-                int id = total >= 76 && b[off + 72] == 1 ? OldPackets.i16(b, off + 74) & 0xffff : 0;
+                int id = OldPackets.touchFinger(b, off, total);
                 if (touchAction != 2) {
                     EventLog.add("← ГУ: касание " + (touchAction == 0 ? "нажатие" : "отпускание")
                             + (id != 0 ? ", палец " + id : "") + " x " + x + ", y " + y);
