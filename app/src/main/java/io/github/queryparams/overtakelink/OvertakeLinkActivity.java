@@ -46,7 +46,7 @@ public final class OvertakeLinkActivity extends Activity {
     private LinearLayout content;
     private TextView[] tabs;
     private String screen = "status";
-    /** Условия показаны и приняты в этом запуске: при каждом открытии приложения они показываются заново. */
+    /** Условия этой версии приняты: в «Условиях» — кнопка «Назад», а не «Принимаю». */
     private boolean termsSeen;
     /** Экран, на который вернёт «Назад» из условий, открытых кнопкой в шапке. */
     private String beforeTerms = "status";
@@ -83,7 +83,8 @@ public final class OvertakeLinkActivity extends Activity {
     protected void onCreate(Bundle state) {
         UpdateInstaller.cleanup(this);
         super.onCreate(state);
-        termsSeen = state != null && state.getBoolean("termsSeen");
+        // Приняли эту версию условий — больше не показываем; изменились (Terms.VERSION) — спросят один раз заново.
+        termsSeen = Terms.accepted(this) || state != null && state.getBoolean("termsSeen");
         EventLog.init(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -230,7 +231,7 @@ public final class OvertakeLinkActivity extends Activity {
     }
 
     private void show(String id) {
-        // При каждом открытии приложения сначала условия: пока их не приняли, вкладки ведут только на них.
+        // Пока условия этой версии не приняты, вкладки ведут только на них.
         screen = termsSeen && Terms.accepted(this) ? id : "terms";
         String[] ids = {"status", "settings", "log"};
         for (int i = 0; i < tabs.length; i++) {
