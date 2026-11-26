@@ -53,7 +53,8 @@ public final class OvertakeLinkActivity extends Activity {
     /** Экран, на который вернёт «Назад» из «Поддержать». */
     private String beforeDonate = "status";
     private int setupStep;
-    private volatile boolean aaServerUp;
+    /** Слушает ли сервер головного устройства Android Auto; null — ещё не проверили (не пугаем «выключен» зря). */
+    private volatile Boolean aaServerUp;
     private long logVersion = -1;
     /** Состояние, с которым нарисован «Статус» или мастер: изменилось — перерисуем. */
     private String shownSignature = "";
@@ -291,7 +292,11 @@ public final class OvertakeLinkActivity extends Activity {
         boolean gap = GapService.selected(this);
         OvertakeLinkService.State st = gap ? GapService.state() : OvertakeLinkService.state();
         LinearLayout card = card();
-        card.addView(text(gap ? GapService.title(this) : OvertakeLinkService.title(this), 19, TEXT, true));
+        // Сервер AA выключен — без него машина телефон не увидит: заголовок говорит об этом и даёт кнопку в Android Auto
+        // (сам сервер включается только там). Текст службы под заголовком — как есть: в нём и её ошибки.
+        boolean aaOff = st != OvertakeLinkService.State.RUNNING && Boolean.FALSE.equals(aaServerUp);
+        card.addView(aaOff ? text(getString(R.string.ol_aa_server_off), 19, WARN, true)
+                : text(gap ? GapService.title(this) : OvertakeLinkService.title(this), 19, TEXT, true));
         card.addView(text(gap ? GapService.detail(this) : OvertakeLinkService.detail(this), 13, MUTED, false));
         int done = st == OvertakeLinkService.State.RUNNING ? 4 : st == OvertakeLinkService.State.HANDSHAKE
                 ? (gap && !GapService.clientConnected() ? 0 : 2) : 0;
@@ -313,20 +318,32 @@ public final class OvertakeLinkActivity extends Activity {
             steps.addView(s, lp);
         }
         card.addView(steps);
-        if (gap) {
-            card.addView(st != OvertakeLinkService.State.WAITING
-                    ? button(getString(R.string.ol_stop), false, v -> startService(new Intent(this, GapService.class).setAction(GapService.ACTION_STOP)))
-                    : button(getString(R.string.ol_gap_start), true, v -> startForegroundService(new Intent(this, GapService.class)
-                            .setAction(GapService.ACTION_START))));
-        } else if (st != OvertakeLinkService.State.WAITING) {
-            card.addView(button(getString(R.string.ol_stop), false, v -> startService(new Intent(this, OvertakeLinkService.class)
-                    .setAction(OvertakeLinkService.ACTION_STOP))));
-        } else {
-            card.addView(button(getString(R.string.ol_connect_manually), true, v -> startForegroundService(new Intent(this, OvertakeLinkService.class)
-                    .setAction(OvertakeLinkService.ACTION_CONNECT_USB))));
+        if (aaOff) {
+            card.addView(button(getString(R.string.ol_open_aa), true, v -> openAndroidAuto()));
         }
+        card.addView(serviceButton(gap, st, !aaOff));
         content.addView(card, cardLp());
+        renderReady();
+    }
 
+    /** Кнопка службы в карточке состояния: «Остановить», пока идёт работа, иначе — включить вывод / подключить вручную. */
+    private Button serviceButton(boolean gap, OvertakeLinkService.State st, boolean primary) {
+        if (gap) {
+            return st != OvertakeLinkService.State.WAITING
+                    ? button(getString(R.string.ol_stop), false, v -> startService(new Intent(this, GapService.class).setAction(GapService.ACTION_STOP)))
+                    : button(getString(R.string.ol_gap_start), primary, v -> startForegroundService(new Intent(this, GapService.class)
+                            .setAction(GapService.ACTION_START)));
+        }
+        if (st != OvertakeLinkService.State.WAITING) {
+            return button(getString(R.string.ol_stop), false, v -> startService(new Intent(this, OvertakeLinkService.class)
+                    .setAction(OvertakeLinkService.ACTION_STOP)));
+        }
+        return button(getString(R.string.ol_connect_manually), primary, v -> startForegroundService(new Intent(this, OvertakeLinkService.class)
+                .setAction(OvertakeLinkService.ACTION_CONNECT_USB)));
+    }
+
+    /** «Готовность»: что из настройки сделано; строка сервера AA — сразу в Android Auto, остальное — в мастер. */
+    private void renderReady() {
         LinearLayout ready = card();
         Check[] checks = checks();
         int okCount = 0;
@@ -338,8 +355,12 @@ public final class OvertakeLinkActivity extends Activity {
         h.addView(text(getString(R.string.ol_ready_count, okCount, checks.length) + (okCount < checks.length ? getString(R.string.ol_ready_fix) : ""), 13,
                 okCount < checks.length ? WARN : OK, false));
         ready.addView(h);
-        for (Check c : checks) {
-            ready.addView(checkRow(c));
+        for (int i = 0; i < checks.length; i++) {
+            View r = checkRow(checks[i]);
+            if (i == AA_CHECK && Boolean.FALSE.equals(aaServerUp)) {
+                r.setOnClickListener(v -> openAndroidAuto());
+            }
+            ready.addView(r);
         }
         ready.setOnClickListener(v -> { setupStep = 0; show("setup"); });
         content.addView(ready, cardLp());
@@ -356,6 +377,9 @@ public final class OvertakeLinkActivity extends Activity {
             this.note = ok ? okNote : badNote;
         }
     }
+
+    /** Место проверки сервера AA в {@link #checks()}. */
+    private static final int AA_CHECK = 2;
 
     private Check[] checks() {
         // Разрешение на уведомления появилось в Android 13; до него уведомления разрешены всегда.
@@ -375,7 +399,7 @@ public final class OvertakeLinkActivity extends Activity {
                 new Check(getString(R.string.ol_check_permissions), notif && mic,
                         getString(R.string.ol_check_permissions_ok), getString(R.string.ol_check_permissions_bad)),
                 new Check(getString(R.string.ol_check_battery), battery, getString(R.string.ol_yes), getString(R.string.ol_check_battery_bad)),
-                new Check(getString(R.string.ol_check_aa_server), aaServerUp,
+                new Check(getString(R.string.ol_check_aa_server), Boolean.TRUE.equals(aaServerUp),
                         getString(R.string.ol_check_aa_server_ok), getString(R.string.ol_check_aa_server_bad)),
                 gap ? new Check(getString(R.string.ol_check_hotspot), GapService.clientConnected(),
                         getString(R.string.ol_check_hotspot_ok), getString(R.string.ol_check_hotspot_bad))
@@ -387,7 +411,7 @@ public final class OvertakeLinkActivity extends Activity {
     private String screenSignature() {
         StringBuilder sb = new StringBuilder(OvertakeLinkService.state().name()).append('|').append(OvertakeLinkService.detail(this))
                 .append('|').append(GapService.state().name()).append('|').append(GapService.detail(this))
-                .append('|').append(UpdateCheck.availableVersion(this)).append('|');
+                .append('|').append(UpdateCheck.availableVersion(this)).append('|').append(aaServerUp).append('|');
         for (Check c : checks()) {
             sb.append(c.ok ? '1' : '0');
         }
